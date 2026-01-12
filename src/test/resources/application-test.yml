@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: jdbc:tc:mysql:8.0:///concert?TC_INITSCRIPT=init.sql
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+  
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  
+  kafka:
+    bootstrap-servers: localhost:9092

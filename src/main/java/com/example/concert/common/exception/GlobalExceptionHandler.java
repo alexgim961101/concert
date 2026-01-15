@@ -10,6 +10,7 @@ import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -21,172 +22,237 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    /**
-     * 비즈니스 로직 예외 처리
-     */
-    @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ApiResponse<Object>> handleBusinessException(BusinessException e) {
-        log.warn("BusinessException: {}", e.getMessage());
-        ErrorCode errorCode = e.getErrorCode();
-        ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
-            errorCode.getCode(),
-            e.getMessage()
-        );
-        return ResponseEntity
-            .status(HttpStatus.BAD_REQUEST)
-            .body(ApiResponse.error(error));
-    }
+        /**
+         * 비즈니스 로직 예외 처리
+         */
+        @ExceptionHandler(BusinessException.class)
+        public ResponseEntity<ApiResponse<Object>> handleBusinessException(BusinessException e) {
+                log.warn("BusinessException: {}", e.getMessage());
+                ErrorCode errorCode = e.getErrorCode();
+                ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
+                                errorCode.getCode(),
+                                e.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.BAD_REQUEST)
+                                .body(ApiResponse.error(error));
+        }
 
-    /**
-     * 리소스 없음 예외 처리
-     */
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ApiResponse<Object>> handleResourceNotFoundException(ResourceNotFoundException e) {
-        log.warn("ResourceNotFoundException: {}", e.getMessage());
-        ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
-            ErrorCode.RESOURCE_NOT_FOUND.getCode(),
-            e.getMessage()
-        );
-        return ResponseEntity
-            .status(HttpStatus.NOT_FOUND)
-            .body(ApiResponse.error(error));
-    }
+        /**
+         * 토큰을 찾을 수 없음 예외 처리
+         */
+        @ExceptionHandler(com.example.concert.domain.queue.usecase.TokenNotFoundException.class)
+        public ResponseEntity<ApiResponse<Object>> handleTokenNotFoundException(
+                        com.example.concert.domain.queue.usecase.TokenNotFoundException e) {
+                log.warn("TokenNotFoundException: {}", e.getMessage());
+                ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
+                                "TOKEN_NOT_FOUND",
+                                e.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.UNAUTHORIZED)
+                                .body(ApiResponse.error(error));
+        }
 
-    /**
-     * Validation 예외 처리 (@Valid)
-     */
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Object>> handleMethodArgumentNotValidException(
-        MethodArgumentNotValidException e) {
-        log.warn("MethodArgumentNotValidException: {}", e.getMessage());
-        Map<String, String> errors = new HashMap<>();
-        e.getBindingResult().getAllErrors().forEach(error -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            errors.put(fieldName, errorMessage);
-        });
-        
-        ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
-            ErrorCode.INVALID_INPUT_VALUE.getCode(),
-            "입력 값 검증에 실패했습니다: " + errors
-        );
-        return ResponseEntity
-            .status(HttpStatus.BAD_REQUEST)
-            .body(ApiResponse.error(error));
-    }
+        /**
+         * 토큰이 활성 상태가 아님 예외 처리
+         */
+        @ExceptionHandler(com.example.concert.domain.queue.usecase.TokenNotActiveException.class)
+        public ResponseEntity<ApiResponse<Object>> handleTokenNotActiveException(
+                        com.example.concert.domain.queue.usecase.TokenNotActiveException e) {
+                log.warn("TokenNotActiveException: {}", e.getMessage());
+                ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
+                                "TOKEN_NOT_ACTIVE",
+                                e.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.UNAUTHORIZED)
+                                .body(ApiResponse.error(error));
+        }
 
-    /**
-     * Bind 예외 처리 (@ModelAttribute)
-     */
-    @ExceptionHandler(BindException.class)
-    public ResponseEntity<ApiResponse<Object>> handleBindException(BindException e) {
-        log.warn("BindException: {}", e.getMessage());
-        Map<String, String> errors = new HashMap<>();
-        e.getBindingResult().getAllErrors().forEach(error -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            errors.put(fieldName, errorMessage);
-        });
-        
-        ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
-            ErrorCode.INVALID_INPUT_VALUE.getCode(),
-            "입력 값 검증에 실패했습니다: " + errors
-        );
-        return ResponseEntity
-            .status(HttpStatus.BAD_REQUEST)
-            .body(ApiResponse.error(error));
-    }
+        /**
+         * 토큰 만료 예외 처리
+         */
+        @ExceptionHandler(com.example.concert.domain.queue.usecase.TokenExpiredException.class)
+        public ResponseEntity<ApiResponse<Object>> handleTokenExpiredException(
+                        com.example.concert.domain.queue.usecase.TokenExpiredException e) {
+                log.warn("TokenExpiredException: {}", e.getMessage());
+                ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
+                                "TOKEN_EXPIRED",
+                                e.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.UNAUTHORIZED)
+                                .body(ApiResponse.error(error));
+        }
 
-    /**
-     * 타입 불일치 예외 처리
-     */
-    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ResponseEntity<ApiResponse<Object>> handleMethodArgumentTypeMismatchException(
-        MethodArgumentTypeMismatchException e) {
-        log.warn("MethodArgumentTypeMismatchException: {}", e.getMessage());
-        ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
-            ErrorCode.INVALID_INPUT_VALUE.getCode(),
-            String.format("'%s'의 값 '%s'이(가) 올바르지 않습니다", e.getName(), e.getValue())
-        );
-        return ResponseEntity
-            .status(HttpStatus.BAD_REQUEST)
-            .body(ApiResponse.error(error));
-    }
+        /**
+         * 콘서트를 찾을 수 없음 예외 처리
+         */
+        @ExceptionHandler(com.example.concert.domain.concert.usecase.ConcertNotFoundException.class)
+        public ResponseEntity<ApiResponse<Object>> handleConcertNotFoundException(
+                        com.example.concert.domain.concert.usecase.ConcertNotFoundException e) {
+                log.warn("ConcertNotFoundException: {}", e.getMessage());
+                ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
+                                "CONCERT_NOT_FOUND",
+                                e.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.NOT_FOUND)
+                                .body(ApiResponse.error(error));
+        }
 
-    /**
-     * HTTP 메시지 읽기 예외 처리
-     */
-    @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ApiResponse<Object>> handleHttpMessageNotReadableException(
-        HttpMessageNotReadableException e) {
-        log.warn("HttpMessageNotReadableException: {}", e.getMessage());
-        ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
-            ErrorCode.INVALID_INPUT_VALUE.getCode(),
-            "요청 본문을 읽을 수 없습니다"
-        );
-        return ResponseEntity
-            .status(HttpStatus.BAD_REQUEST)
-            .body(ApiResponse.error(error));
-    }
+        /**
+         * 리소스 없음 예외 처리
+         */
+        @ExceptionHandler(ResourceNotFoundException.class)
+        public ResponseEntity<ApiResponse<Object>> handleResourceNotFoundException(ResourceNotFoundException e) {
+                log.warn("ResourceNotFoundException: {}", e.getMessage());
+                ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
+                                ErrorCode.RESOURCE_NOT_FOUND.getCode(),
+                                e.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.NOT_FOUND)
+                                .body(ApiResponse.error(error));
+        }
 
-    /**
-     * HTTP 메서드 미지원 예외 처리
-     */
-    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public ResponseEntity<ApiResponse<Object>> handleHttpRequestMethodNotSupportedException(
-        HttpRequestMethodNotSupportedException e) {
-        log.warn("HttpRequestMethodNotSupportedException: {}", e.getMessage());
-        ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
-            ErrorCode.METHOD_NOT_ALLOWED.getCode(),
-            "지원하지 않는 HTTP 메서드입니다: " + e.getMethod()
-        );
-        return ResponseEntity
-            .status(HttpStatus.METHOD_NOT_ALLOWED)
-            .body(ApiResponse.error(error));
-    }
+        /**
+         * Validation 예외 처리 (@Valid)
+         */
+        @ExceptionHandler(MethodArgumentNotValidException.class)
+        public ResponseEntity<ApiResponse<Object>> handleMethodArgumentNotValidException(
+                        MethodArgumentNotValidException e) {
+                log.warn("MethodArgumentNotValidException: {}", e.getMessage());
+                Map<String, String> errors = new HashMap<>();
+                e.getBindingResult().getAllErrors().forEach(error -> {
+                        String fieldName = ((FieldError) error).getField();
+                        String errorMessage = error.getDefaultMessage();
+                        errors.put(fieldName, errorMessage);
+                });
 
-    /**
-     * 데이터베이스 접근 예외 처리
-     */
-    @ExceptionHandler(DataAccessException.class)
-    public ResponseEntity<ApiResponse<Object>> handleDataAccessException(DataAccessException e) {
-        log.error("DataAccessException: ", e);
-        ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
-            ErrorCode.DATA_ACCESS_ERROR.getCode(),
-            "데이터베이스 오류가 발생했습니다"
-        );
-        return ResponseEntity
-            .status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(ApiResponse.error(error));
-    }
+                ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
+                                ErrorCode.INVALID_INPUT_VALUE.getCode(),
+                                "입력 값 검증에 실패했습니다: " + errors);
+                return ResponseEntity
+                                .status(HttpStatus.BAD_REQUEST)
+                                .body(ApiResponse.error(error));
+        }
 
-    /**
-     * IllegalArgumentException 처리
-     */
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiResponse<Object>> handleIllegalArgumentException(IllegalArgumentException e) {
-        log.warn("IllegalArgumentException: {}", e.getMessage());
-        ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
-            ErrorCode.INVALID_INPUT_VALUE.getCode(),
-            e.getMessage()
-        );
-        return ResponseEntity
-            .status(HttpStatus.BAD_REQUEST)
-            .body(ApiResponse.error(error));
-    }
+        /**
+         * Bind 예외 처리 (@ModelAttribute)
+         */
+        @ExceptionHandler(BindException.class)
+        public ResponseEntity<ApiResponse<Object>> handleBindException(BindException e) {
+                log.warn("BindException: {}", e.getMessage());
+                Map<String, String> errors = new HashMap<>();
+                e.getBindingResult().getAllErrors().forEach(error -> {
+                        String fieldName = ((FieldError) error).getField();
+                        String errorMessage = error.getDefaultMessage();
+                        errors.put(fieldName, errorMessage);
+                });
 
-    /**
-     * 기타 예외 처리
-     */
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Object>> handleException(Exception e) {
-        log.error("Unexpected exception: ", e);
-        ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
-            ErrorCode.INTERNAL_SERVER_ERROR.getCode(),
-            "예상치 못한 오류가 발생했습니다"
-        );
-        return ResponseEntity
-            .status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(ApiResponse.error(error));
-    }
+                ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
+                                ErrorCode.INVALID_INPUT_VALUE.getCode(),
+                                "입력 값 검증에 실패했습니다: " + errors);
+                return ResponseEntity
+                                .status(HttpStatus.BAD_REQUEST)
+                                .body(ApiResponse.error(error));
+        }
+
+        /**
+         * 타입 불일치 예외 처리
+         */
+        @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+        public ResponseEntity<ApiResponse<Object>> handleMethodArgumentTypeMismatchException(
+                        MethodArgumentTypeMismatchException e) {
+                log.warn("MethodArgumentTypeMismatchException: {}", e.getMessage());
+                ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
+                                ErrorCode.INVALID_INPUT_VALUE.getCode(),
+                                String.format("'%s'의 값 '%s'이(가) 올바르지 않습니다", e.getName(), e.getValue()));
+                return ResponseEntity
+                                .status(HttpStatus.BAD_REQUEST)
+                                .body(ApiResponse.error(error));
+        }
+
+        /**
+         * HTTP 메시지 읽기 예외 처리
+         */
+        @ExceptionHandler(HttpMessageNotReadableException.class)
+        public ResponseEntity<ApiResponse<Object>> handleHttpMessageNotReadableException(
+                        HttpMessageNotReadableException e) {
+                log.warn("HttpMessageNotReadableException: {}", e.getMessage());
+                ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
+                                ErrorCode.INVALID_INPUT_VALUE.getCode(),
+                                "요청 본문을 읽을 수 없습니다");
+                return ResponseEntity
+                                .status(HttpStatus.BAD_REQUEST)
+                                .body(ApiResponse.error(error));
+        }
+
+        /**
+         * 필수 헤더 누락 예외 처리
+         */
+        @ExceptionHandler(MissingRequestHeaderException.class)
+        public ResponseEntity<ApiResponse<Object>> handleMissingRequestHeaderException(
+                        MissingRequestHeaderException e) {
+                log.warn("MissingRequestHeaderException: {}", e.getMessage());
+                ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
+                                ErrorCode.INVALID_INPUT_VALUE.getCode(),
+                                "필수 헤더가 누락되었습니다: " + e.getHeaderName());
+                return ResponseEntity
+                                .status(HttpStatus.BAD_REQUEST)
+                                .body(ApiResponse.error(error));
+        }
+
+        /**
+         * HTTP 메서드 미지원 예외 처리
+         */
+        @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+        public ResponseEntity<ApiResponse<Object>> handleHttpRequestMethodNotSupportedException(
+                        HttpRequestMethodNotSupportedException e) {
+                log.warn("HttpRequestMethodNotSupportedException: {}", e.getMessage());
+                ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
+                                ErrorCode.METHOD_NOT_ALLOWED.getCode(),
+                                "지원하지 않는 HTTP 메서드입니다: " + e.getMethod());
+                return ResponseEntity
+                                .status(HttpStatus.METHOD_NOT_ALLOWED)
+                                .body(ApiResponse.error(error));
+        }
+
+        /**
+         * 데이터베이스 접근 예외 처리
+         */
+        @ExceptionHandler(DataAccessException.class)
+        public ResponseEntity<ApiResponse<Object>> handleDataAccessException(DataAccessException e) {
+                log.error("DataAccessException: ", e);
+                ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
+                                ErrorCode.DATA_ACCESS_ERROR.getCode(),
+                                "데이터베이스 오류가 발생했습니다");
+                return ResponseEntity
+                                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body(ApiResponse.error(error));
+        }
+
+        /**
+         * IllegalArgumentException 처리
+         */
+        @ExceptionHandler(IllegalArgumentException.class)
+        public ResponseEntity<ApiResponse<Object>> handleIllegalArgumentException(IllegalArgumentException e) {
+                log.warn("IllegalArgumentException: {}", e.getMessage());
+                ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
+                                ErrorCode.INVALID_INPUT_VALUE.getCode(),
+                                e.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.BAD_REQUEST)
+                                .body(ApiResponse.error(error));
+        }
+
+        /**
+         * 기타 예외 처리
+         */
+        @ExceptionHandler(Exception.class)
+        public ResponseEntity<ApiResponse<Object>> handleException(Exception e) {
+                log.error("Unexpected exception: ", e);
+                ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
+                                ErrorCode.INTERNAL_SERVER_ERROR.getCode(),
+                                "예상치 못한 오류가 발생했습니다");
+                return ResponseEntity
+                                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body(ApiResponse.error(error));
+        }
 }

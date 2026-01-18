@@ -4,7 +4,7 @@
 
 ### 1-1. 예약 가능 날짜 조회
 - **GET** `/api/v1/concerts/{concertId}/schedules`
-- **Header**: `Authorization: {QueueToken}` (Optional depending on policy)
+- **Header**: `Concert-Queue-Token: {QueueToken}` (Optional depending on policy)
 - **Response**:
     ```json
     {
@@ -24,7 +24,7 @@
 
 ### 1-2. 예약 가능 좌석 조회
 - **GET** `/api/v1/schedules/{scheduleId}/seats`
-- **Header**: `Authorization: {QueueToken}`
+- **Header**: `Concert-Queue-Token: {QueueToken}`
 - **Response**:
     ```json
     {
@@ -50,7 +50,7 @@
 
 ### 2-1. 좌석 예약 요청
 - **POST** `/api/v1/reservations`
-- **Header**: `Authorization: {QueueToken}`
+- **Header**: `Concert-Queue-Token: {QueueToken}`
 - **Body**:
     ```json
     {
@@ -110,7 +110,7 @@
 
 ### 4-1. 예약 결제 (포인트 사용)
 - **POST** `/api/v1/payments`
-- **Header**: `Authorization: {QueueToken}`
+- **Header**: `Concert-Queue-Token: {QueueToken}`
 - **Body**:
     ```json
     {
@@ -154,7 +154,7 @@
 
 ### 5-2. 대기열 상태(순번) 조회
 - **GET** `/api/v1/queue/status`
-- **Header**: `Authorization: {QueueToken}` (or pass token in query param)
+- **Header**: `Concert-Queue-Token: {QueueToken}` (or pass token in query param)
 - **Response**:
     ```json
     {

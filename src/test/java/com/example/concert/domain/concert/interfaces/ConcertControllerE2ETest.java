@@ -102,7 +102,7 @@ class ConcertControllerE2ETest {
         @DisplayName("유효한 토큰으로 스케줄 조회 시 200 OK 및 올바른 응답 구조")
         void shouldReturn200_whenValidTokenProvided() throws Exception {
             mockMvc.perform(get("/api/v1/concerts/{concertId}/schedules", concert.getId())
-                    .header("Authorization", validToken))
+                    .header("Concert-Queue-Token", validToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.concertId").value(concert.getId()))
                     .andExpect(jsonPath("$.schedules").isArray())
@@ -118,8 +118,8 @@ class ConcertControllerE2ETest {
     @DisplayName("스케줄 조회 - 실패 케이스")
     class ScheduleFailureCase {
         @Test
-        @DisplayName("Authorization 헤더 누락 시 400 Bad Request")
-        void shouldReturn400_whenAuthorizationHeaderMissing() throws Exception {
+        @DisplayName("Concert-Queue-Token 헤더 누락 시 400 Bad Request")
+        void shouldReturn400_whenConcertQueueTokenHeaderMissing() throws Exception {
             mockMvc.perform(get("/api/v1/concerts/{concertId}/schedules", concert.getId()))
                     .andExpect(status().isBadRequest());
         }
@@ -128,7 +128,7 @@ class ConcertControllerE2ETest {
         @DisplayName("존재하지 않는 토큰으로 요청 시 401 Unauthorized")
         void shouldReturn401_whenTokenNotFound() throws Exception {
             mockMvc.perform(get("/api/v1/concerts/{concertId}/schedules", concert.getId())
-                    .header("Authorization", "non-existent-token"))
+                    .header("Concert-Queue-Token", "non-existent-token"))
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.error.code").value("TOKEN_NOT_FOUND"));
         }
@@ -137,7 +137,7 @@ class ConcertControllerE2ETest {
         @DisplayName("존재하지 않는 콘서트 ID로 요청 시 404 Not Found")
         void shouldReturn404_whenConcertNotFound() throws Exception {
             mockMvc.perform(get("/api/v1/concerts/{concertId}/schedules", 999L)
-                    .header("Authorization", validToken))
+                    .header("Concert-Queue-Token", validToken))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.error.code").value("CONCERT_NOT_FOUND"));
         }
@@ -152,7 +152,7 @@ class ConcertControllerE2ETest {
         @DisplayName("전체 좌석 조회 - status 파라미터 없음")
         void shouldReturnAllSeats_WhenNoStatusParam() throws Exception {
             mockMvc.perform(get("/api/v1/schedules/{scheduleId}/seats", scheduleId)
-                    .header("Authorization", validToken))
+                    .header("Concert-Queue-Token", validToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.scheduleId").value(scheduleId))
                     .andExpect(jsonPath("$.seats", hasSize(51))) // 50 AVAILABLE + 1 RESERVED
@@ -167,7 +167,7 @@ class ConcertControllerE2ETest {
         void shouldReturnOnlyAvailableSeats_WhenStatusParamProvided() throws Exception {
             mockMvc.perform(get("/api/v1/schedules/{scheduleId}/seats", scheduleId)
                     .param("status", "AVAILABLE")
-                    .header("Authorization", validToken))
+                    .header("Concert-Queue-Token", validToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.seats", hasSize(50)))
                     .andExpect(jsonPath("$.seats[*].status", everyItem(is("AVAILABLE"))));
@@ -178,7 +178,7 @@ class ConcertControllerE2ETest {
         void shouldReturnMultipleStatusSeats() throws Exception {
             mockMvc.perform(get("/api/v1/schedules/{scheduleId}/seats", scheduleId)
                     .param("status", "AVAILABLE", "RESERVED")
-                    .header("Authorization", validToken))
+                    .header("Concert-Queue-Token", validToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.seats", hasSize(51)));
         }
@@ -189,8 +189,8 @@ class ConcertControllerE2ETest {
     class SeatsFailureCases {
 
         @Test
-        @DisplayName("Authorization 헤더 누락 시 400 Bad Request")
-        void shouldReturn400_WhenAuthorizationHeaderMissing() throws Exception {
+        @DisplayName("Concert-Queue-Token 헤더 누락 시 400 Bad Request")
+        void shouldReturn400_WhenConcertQueueTokenHeaderMissing() throws Exception {
             mockMvc.perform(get("/api/v1/schedules/{scheduleId}/seats", scheduleId))
                     .andExpect(status().isBadRequest());
         }
@@ -199,7 +199,7 @@ class ConcertControllerE2ETest {
         @DisplayName("존재하지 않는 토큰으로 요청 시 401 Unauthorized")
         void shouldReturn401_WhenTokenNotFound() throws Exception {
             mockMvc.perform(get("/api/v1/schedules/{scheduleId}/seats", scheduleId)
-                    .header("Authorization", "invalid-token"))
+                    .header("Concert-Queue-Token", "invalid-token"))
                     .andExpect(status().isUnauthorized());
         }
     }

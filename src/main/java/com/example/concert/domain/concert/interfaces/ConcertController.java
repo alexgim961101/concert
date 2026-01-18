@@ -23,7 +23,7 @@ public class ConcertController {
     @GetMapping("/concerts/{concertId}/schedules")
     public ResponseEntity<ConcertSchedulesResponse> getAvailableSchedules(
             @PathVariable Long concertId,
-            @RequestHeader("Authorization") String token) {
+            @RequestHeader("Concert-Queue-Token") String token) {
 
         GetAvailableDatesUseCase.AvailableDatesResult result = getAvailableDatesUseCase.execute(token, concertId);
 
@@ -38,7 +38,7 @@ public class ConcertController {
     @GetMapping("/schedules/{scheduleId}/seats")
     public ResponseEntity<SeatsResponse> getSeats(
             @PathVariable Long scheduleId,
-            @RequestHeader("Authorization") String token,
+            @RequestHeader("Concert-Queue-Token") String token,
             @RequestParam(required = false) List<SeatStatus> status) {
 
         GetSeatsUseCase.SeatsResult result = getSeatsUseCase.execute(token, scheduleId, status);

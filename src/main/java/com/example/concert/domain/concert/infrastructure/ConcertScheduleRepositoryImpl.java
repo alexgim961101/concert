@@ -22,4 +22,9 @@ public class ConcertScheduleRepositoryImpl implements ConcertScheduleRepository 
     public boolean existsConcertById(Long concertId) {
         return jpaRepository.existsConcertById(concertId);
     }
+
+    @Override
+    public boolean existsById(Long scheduleId) {
+        return jpaRepository.existsById(scheduleId);
+    }
 }

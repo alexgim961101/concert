@@ -98,6 +98,51 @@ public class GlobalExceptionHandler {
         }
 
         /**
+         * 좌석을 찾을 수 없음 예외 처리
+         */
+        @ExceptionHandler(com.example.concert.domain.reservation.usecase.SeatNotFoundException.class)
+        public ResponseEntity<ApiResponse<Object>> handleSeatNotFoundException(
+                        com.example.concert.domain.reservation.usecase.SeatNotFoundException e) {
+                log.warn("SeatNotFoundException: {}", e.getMessage());
+                ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
+                                "SEAT_NOT_FOUND",
+                                e.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.NOT_FOUND)
+                                .body(ApiResponse.error(error));
+        }
+
+        /**
+         * 좌석 예약 불가 예외 처리
+         */
+        @ExceptionHandler(com.example.concert.domain.reservation.usecase.SeatNotAvailableException.class)
+        public ResponseEntity<ApiResponse<Object>> handleSeatNotAvailableException(
+                        com.example.concert.domain.reservation.usecase.SeatNotAvailableException e) {
+                log.warn("SeatNotAvailableException: {}", e.getMessage());
+                ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
+                                "SEAT_NOT_AVAILABLE",
+                                e.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.CONFLICT)
+                                .body(ApiResponse.error(error));
+        }
+
+        /**
+         * 스케줄을 찾을 수 없음 예외 처리
+         */
+        @ExceptionHandler(com.example.concert.domain.reservation.usecase.ScheduleNotFoundException.class)
+        public ResponseEntity<ApiResponse<Object>> handleScheduleNotFoundException(
+                        com.example.concert.domain.reservation.usecase.ScheduleNotFoundException e) {
+                log.warn("ScheduleNotFoundException: {}", e.getMessage());
+                ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
+                                "SCHEDULE_NOT_FOUND",
+                                e.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.NOT_FOUND)
+                                .body(ApiResponse.error(error));
+        }
+
+        /**
          * 리소스 없음 예외 처리
          */
         @ExceptionHandler(ResourceNotFoundException.class)

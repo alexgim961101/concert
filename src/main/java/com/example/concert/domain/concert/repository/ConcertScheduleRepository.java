@@ -7,4 +7,6 @@ public interface ConcertScheduleRepository {
     List<ConcertSchedule> findByConcertId(Long concertId);
 
     boolean existsConcertById(Long concertId);
+
+    boolean existsById(Long scheduleId);
 }

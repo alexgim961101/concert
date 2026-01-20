@@ -157,6 +157,21 @@ public class GlobalExceptionHandler {
         }
 
         /**
+         * PG 결제 실패 예외 처리
+         */
+        @ExceptionHandler(com.example.concert.domain.point.usecase.PaymentFailedException.class)
+        public ResponseEntity<ApiResponse<Object>> handlePaymentFailedException(
+                        com.example.concert.domain.point.usecase.PaymentFailedException e) {
+                log.warn("PaymentFailedException: {}", e.getMessage());
+                ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
+                                "PAYMENT_FAILED",
+                                e.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.BAD_GATEWAY)
+                                .body(ApiResponse.error(error));
+        }
+
+        /**
          * Validation 예외 처리 (@Valid)
          */
         @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -270,6 +285,20 @@ public class GlobalExceptionHandler {
                                 "데이터베이스 오류가 발생했습니다");
                 return ResponseEntity
                                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body(ApiResponse.error(error));
+        }
+
+        /**
+         * IllegalStateException 처리 (포인트 최대 한도 초과 등)
+         */
+        @ExceptionHandler(IllegalStateException.class)
+        public ResponseEntity<ApiResponse<Object>> handleIllegalStateException(IllegalStateException e) {
+                log.warn("IllegalStateException: {}", e.getMessage());
+                ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
+                                "INVALID_STATE",
+                                e.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.BAD_REQUEST)
                                 .body(ApiResponse.error(error));
         }
 

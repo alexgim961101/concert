@@ -72,10 +72,11 @@
 ## 3. Point (포인트)
 
 ### 3-1. 포인트 충전 (충전 결제)
-- **POST** `/api/v1/users/{userId}/point/charge`
+- **PATCH** `/api/v1/points/charge`
 - **Body**:
     ```json
     {
+        "userId": 1,
         "amount": 50000,
         "paymentMethod": "CARD", // CARD, TRANSFER
         "paymentDetail": {
@@ -97,7 +98,7 @@
     - `PointHistory`에 `type: CHARGE`, `transaction_type: PAYMENT`로 기록됨.
 
 ### 3-2. 포인트 조회
-- **GET** `/api/v1/users/{userId}/point`
+- **GET** `/api/v1/points/{userId}`
 - **Response**:
     ```json
     {

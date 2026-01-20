@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -162,6 +163,40 @@ class PointControllerE2ETest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(invalidRequest))
                     .andExpect(status().isBadRequest());
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/v1/points/{userId}")
+    class GetPoint {
+
+        @Test
+        @DisplayName("포인트가 존재하는 유저 조회 -> 200 OK, 잔액 반환")
+        void shouldReturnPointSuccessfully() throws Exception {
+            // Given: 5000원 보유
+            PointJpaEntity existing = new PointJpaEntity(userId, new BigDecimal("5000"));
+            pointJpaRepository.save(existing);
+            entityManager.flush();
+            entityManager.clear();
+
+            // When & Then
+            mockMvc.perform(get("/api/v1/points/{userId}", userId))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.userId").value(userId))
+                    .andExpect(jsonPath("$.data.point").value(5000));
+        }
+
+        @Test
+        @DisplayName("포인트 기록 없는 유저 조회 -> 200 OK, 잔액 0원 반환")
+        void shouldReturnZeroPointForNewUser() throws Exception {
+            // Given: DB에 데이터 없음
+            Long newUserId = 999L;
+
+            // When & Then
+            mockMvc.perform(get("/api/v1/points/{userId}", newUserId))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.userId").value(newUserId))
+                    .andExpect(jsonPath("$.data.point").value(0));
         }
     }
 }

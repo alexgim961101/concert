@@ -5,6 +5,7 @@ erDiagram
     Users ||--o{ PointHistory : "has"
     Users ||--o{ Reservation : "makes"
     Users ||--o{ QueueToken : "issued"
+    Users ||--|| Points : "owns"
     
     Concert ||--|{ ConcertSchedule : "has"
     Concert ||--o{ QueueToken : "has waiting consumers"
@@ -16,9 +17,17 @@ erDiagram
     Users {
         bigint id PK
         string name
-        decimal point "Current balance"
         datetime created_at
         datetime updated_at
+    }
+
+    Points {
+        bigint id PK
+        bigint user_id FK
+        decimal balance "Current balance"
+        datetime created_at
+        datetime updated_at
+        bigint version "Optimistic Lock"
     }
 
     PointHistory {

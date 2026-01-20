@@ -5,4 +5,6 @@ import java.util.Optional;
 
 public interface QueueTokenRepository {
     Optional<QueueToken> findByToken(String token);
+
+    QueueToken save(QueueToken queueToken);
 }

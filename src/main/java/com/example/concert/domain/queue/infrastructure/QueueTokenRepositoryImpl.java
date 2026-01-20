@@ -16,4 +16,18 @@ public class QueueTokenRepositoryImpl implements QueueTokenRepository {
         return jpaRepository.findByToken(token)
                 .map(QueueTokenMapper::toDomain);
     }
+
+    @Override
+    public QueueToken save(QueueToken queueToken) {
+        QueueTokenJpaEntity entity;
+        if (queueToken.getId() != null) {
+            entity = jpaRepository.findById(queueToken.getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Token not found: " + queueToken.getId()));
+            entity.setStatus(queueToken.getStatus());
+        } else {
+            entity = QueueTokenMapper.toEntity(queueToken);
+        }
+        QueueTokenJpaEntity saved = jpaRepository.save(entity);
+        return QueueTokenMapper.toDomain(saved);
+    }
 }

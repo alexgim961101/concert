@@ -15,4 +15,17 @@ public class QueueTokenMapper {
                 entity.getExpiresAt(),
                 entity.getCreatedAt());
     }
+
+    public static QueueTokenJpaEntity toEntity(QueueToken domain) {
+        QueueTokenJpaEntity entity = new QueueTokenJpaEntity(
+                domain.getUserId(),
+                domain.getConcertId(),
+                domain.getToken(),
+                domain.getStatus(),
+                domain.getExpiresAt());
+        if (domain.getId() != null) {
+            entity.setId(domain.getId());
+        }
+        return entity;
+    }
 }

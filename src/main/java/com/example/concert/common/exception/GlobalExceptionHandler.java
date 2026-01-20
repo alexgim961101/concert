@@ -172,6 +172,21 @@ public class GlobalExceptionHandler {
         }
 
         /**
+         * 예약 조회 실패 예외 처리
+         */
+        @ExceptionHandler(com.example.concert.domain.payment.usecase.ReservationNotFoundException.class)
+        public ResponseEntity<ApiResponse<Object>> handleReservationNotFoundException(
+                        com.example.concert.domain.payment.usecase.ReservationNotFoundException e) {
+                log.warn("ReservationNotFoundException: {}", e.getMessage());
+                ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
+                                "RESERVATION_NOT_FOUND",
+                                e.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.NOT_FOUND)
+                                .body(ApiResponse.error(error));
+        }
+
+        /**
          * Validation 예외 처리 (@Valid)
          */
         @ExceptionHandler(MethodArgumentNotValidException.class)

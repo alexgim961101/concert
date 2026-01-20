@@ -51,6 +51,13 @@ public class SeatJpaEntity {
         this.status = SeatStatus.AVAILABLE;
     }
 
+    // 테스트용 생성자 (scheduleId 직접 사용)
+    public SeatJpaEntity(Long scheduleId, Integer seatNumber, BigDecimal price, SeatStatus status) {
+        this.seatNumber = seatNumber;
+        this.price = price;
+        this.status = status;
+    }
+
     public Long getId() {
         return id;
     }

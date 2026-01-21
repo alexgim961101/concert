@@ -1,6 +1,7 @@
 package com.example.concert.domain.queue.infrastructure;
 
 import com.example.concert.domain.queue.entity.QueueToken;
+import com.example.concert.domain.queue.entity.TokenStatus;
 import com.example.concert.domain.queue.repository.QueueTokenRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -29,5 +30,10 @@ public class QueueTokenRepositoryImpl implements QueueTokenRepository {
         }
         QueueTokenJpaEntity saved = jpaRepository.save(entity);
         return QueueTokenMapper.toDomain(saved);
+    }
+
+    @Override
+    public long countByStatusAndIdLessThan(TokenStatus status, Long id) {
+        return jpaRepository.countByStatusAndIdLessThan(status, id);
     }
 }

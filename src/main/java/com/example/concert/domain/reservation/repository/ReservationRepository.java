@@ -14,5 +14,10 @@ public interface ReservationRepository {
 
     Optional<Reservation> findById(Long id);
 
+    /**
+     * 비관적 락을 사용한 예약 조회 (중복 결제 방지)
+     */
+    Optional<Reservation> findByIdWithLock(Long id);
+
     List<Reservation> findAllExpired(LocalDateTime now);
 }

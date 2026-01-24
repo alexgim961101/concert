@@ -40,6 +40,12 @@ public class SeatRepositoryImpl implements SeatRepository {
     }
 
     @Override
+    public Optional<Seat> findByIdWithLock(Long seatId) {
+        return jpaRepository.findByIdWithLock(seatId)
+                .map(SeatMapper::toDomain);
+    }
+
+    @Override
     public Seat save(Seat seat) {
         SeatJpaEntity entity = jpaRepository.findById(seat.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Seat not found for update: " + seat.getId()));

@@ -1,9 +1,11 @@
 package com.example.concert.domain.point.usecase;
 
+import com.example.concert.common.exception.ConcurrencyConflictException;
 import com.example.concert.domain.point.entity.Point;
 import com.example.concert.domain.point.repository.PointRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,9 +34,15 @@ public class UsePointUseCase {
 
         BigDecimal beforeBalance = point.getBalance();
         point.use(amount);
-        pointRepository.save(point);
 
-        log.info("Point used: userId={}, amount={}, before={}, after={}",
-                userId, amount, beforeBalance, point.getBalance());
+        // 저장 (낙관적 락으로 동시 사용 충돌 감지)
+        try {
+            pointRepository.save(point);
+
+            log.info("Point used: userId={}, amount={}, before={}, after={}",
+                    userId, amount, beforeBalance, point.getBalance());
+        } catch (ObjectOptimisticLockingFailureException e) {
+            throw new ConcurrencyConflictException("포인트 사용 중 충돌이 발생했습니다. 다시 시도해 주세요.");
+        }
     }
 }

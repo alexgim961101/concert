@@ -15,5 +15,10 @@ public interface SeatRepository {
 
     Optional<Seat> findById(Long seatId);
 
+    /**
+     * 비관적 락을 사용한 좌석 조회 (동시 예약 방지)
+     */
+    Optional<Seat> findByIdWithLock(Long seatId);
+
     Seat save(Seat seat);
 }

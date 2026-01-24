@@ -38,6 +38,12 @@ public class ReservationRepositoryImpl implements ReservationRepository {
     }
 
     @Override
+    public Optional<Reservation> findByIdWithLock(Long id) {
+        return jpaRepository.findByIdWithLock(id)
+                .map(ReservationMapper::toDomain);
+    }
+
+    @Override
     public List<Reservation> findAllExpired(LocalDateTime now) {
         return jpaRepository.findAllByStatusAndExpiresAtBefore(ReservationStatus.PENDING, now)
                 .stream()

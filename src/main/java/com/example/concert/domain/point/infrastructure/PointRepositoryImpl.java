@@ -30,7 +30,8 @@ public class PointRepositoryImpl implements PointRepository {
             // 신규 생성
             entity = PointMapper.toEntity(point);
         }
-        PointJpaEntity saved = jpaRepository.save(entity);
+        // saveAndFlush로 즉시 반영하여 낙관적 락 예외를 즉시 감지
+        PointJpaEntity saved = jpaRepository.saveAndFlush(entity);
         return PointMapper.toDomain(saved);
     }
 }

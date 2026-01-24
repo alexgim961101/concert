@@ -304,6 +304,36 @@ public class GlobalExceptionHandler {
         }
 
         /**
+         * 동시성 충돌 예외 처리 (낙관적 락)
+         */
+        @ExceptionHandler(ConcurrencyConflictException.class)
+        public ResponseEntity<ApiResponse<Object>> handleConcurrencyConflictException(
+                        ConcurrencyConflictException e) {
+                log.warn("ConcurrencyConflictException: {}", e.getMessage());
+                ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
+                                ErrorCode.CONCURRENCY_CONFLICT.getCode(),
+                                e.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.CONFLICT)
+                                .body(ApiResponse.error(error));
+        }
+
+        /**
+         * 비관적 락 타임아웃/교착 상태 예외 처리
+         */
+        @ExceptionHandler(org.springframework.dao.PessimisticLockingFailureException.class)
+        public ResponseEntity<ApiResponse<Object>> handlePessimisticLockingFailureException(
+                        org.springframework.dao.PessimisticLockingFailureException e) {
+                log.warn("PessimisticLockingFailureException: {}", e.getMessage());
+                ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
+                                ErrorCode.CONCURRENCY_CONFLICT.getCode(),
+                                "다른 요청을 처리 중입니다. 잠시 후 다시 시도해 주세요.");
+                return ResponseEntity
+                                .status(HttpStatus.CONFLICT)
+                                .body(ApiResponse.error(error));
+        }
+
+        /**
          * IllegalStateException 처리 (포인트 최대 한도 초과 등)
          */
         @ExceptionHandler(IllegalStateException.class)

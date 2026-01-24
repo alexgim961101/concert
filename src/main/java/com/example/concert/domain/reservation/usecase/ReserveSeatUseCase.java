@@ -31,8 +31,8 @@ public class ReserveSeatUseCase {
             throw new ScheduleNotFoundException(scheduleId);
         }
 
-        // 3. 좌석 조회
-        Seat seat = seatRepository.findById(seatId)
+        // 3. 좌석 조회 (비관적 락으로 동시 예약 방지)
+        Seat seat = seatRepository.findByIdWithLock(seatId)
                 .orElseThrow(() -> new SeatNotFoundException(seatId));
 
         // 4. 좌석 예약 (도메인 로직)

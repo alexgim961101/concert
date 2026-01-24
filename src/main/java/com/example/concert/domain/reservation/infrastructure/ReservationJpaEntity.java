@@ -8,7 +8,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "reservations")
+@Table(name = "reservations", indexes = {
+        @Index(name = "idx_reservations_status_expires", columnList = "status, expires_at")
+})
 @EntityListeners(AuditingEntityListener.class)
 public class ReservationJpaEntity {
     @Id

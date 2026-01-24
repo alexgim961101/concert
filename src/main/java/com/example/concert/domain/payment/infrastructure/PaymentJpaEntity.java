@@ -9,7 +9,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "payments")
+@Table(name = "payments", indexes = {
+        @Index(name = "idx_payments_user_id", columnList = "user_id"),
+        @Index(name = "idx_payments_reservation_id", columnList = "reservation_id")
+})
 @EntityListeners(AuditingEntityListener.class)
 public class PaymentJpaEntity {
     @Id

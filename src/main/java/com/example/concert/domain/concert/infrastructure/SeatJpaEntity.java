@@ -10,7 +10,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "seats")
+@Table(name = "seats", indexes = {
+        @Index(name = "idx_seats_schedule_status", columnList = "schedule_id, status")
+})
 @EntityListeners(AuditingEntityListener.class)
 public class SeatJpaEntity {
     @Id

@@ -8,7 +8,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "queue_tokens")
+@Table(name = "queue_tokens", indexes = {
+        @Index(name = "idx_queue_tokens_status_id", columnList = "status, id")
+})
 @EntityListeners(AuditingEntityListener.class)
 public class QueueTokenJpaEntity {
     @Id

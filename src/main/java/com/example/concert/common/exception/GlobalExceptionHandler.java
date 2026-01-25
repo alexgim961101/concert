@@ -334,6 +334,21 @@ public class GlobalExceptionHandler {
         }
 
         /**
+         * Redis 분산 락 획득 실패 예외 처리
+         */
+        @ExceptionHandler(com.example.concert.common.lock.LockAcquisitionException.class)
+        public ResponseEntity<ApiResponse<Object>> handleLockAcquisitionException(
+                        com.example.concert.common.lock.LockAcquisitionException e) {
+                log.warn("LockAcquisitionException: {}", e.getMessage());
+                ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse(
+                                ErrorCode.CONCURRENCY_CONFLICT.getCode(),
+                                "요청이 많아 처리할 수 없습니다. 잠시 후 다시 시도해 주세요.");
+                return ResponseEntity
+                                .status(HttpStatus.CONFLICT)
+                                .body(ApiResponse.error(error));
+        }
+
+        /**
          * IllegalStateException 처리 (포인트 최대 한도 초과 등)
          */
         @ExceptionHandler(IllegalStateException.class)

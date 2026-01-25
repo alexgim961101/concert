@@ -1,5 +1,6 @@
 package com.example.concert.domain.reservation.usecase;
 
+import com.example.concert.common.lock.DistributedLock;
 import com.example.concert.domain.concert.entity.Seat;
 import com.example.concert.domain.concert.repository.ConcertScheduleRepository;
 import com.example.concert.domain.concert.repository.SeatRepository;
@@ -23,6 +24,7 @@ public class ReserveSeatUseCase {
     private final ReservationRepository reservationRepository;
     private final ConcertService concertService;
 
+    @DistributedLock(key = "'seat:' + #seatId", waitTime = 5, leaseTime = 10)
     @Transactional
     public ReservationResult execute(String token, Long userId, Long scheduleId, Long seatId) {
         // 1. 토큰 검증 (기존 concert 로직과 동일)
@@ -33,8 +35,8 @@ public class ReserveSeatUseCase {
             throw new ScheduleNotFoundException(scheduleId);
         }
 
-        // 3. 좌석 조회 (비관적 락으로 동시 예약 방지)
-        Seat seat = seatRepository.findByIdWithLock(seatId)
+        // 3. 좌석 조회 (Redis 분산 락으로 동시 예약 방지)
+        Seat seat = seatRepository.findById(seatId)
                 .orElseThrow(() -> new SeatNotFoundException(seatId));
 
         // 4. 좌석 예약 (도메인 로직)

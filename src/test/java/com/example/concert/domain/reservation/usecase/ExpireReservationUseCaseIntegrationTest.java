@@ -1,5 +1,6 @@
 package com.example.concert.domain.reservation.usecase;
 
+import com.example.concert.config.AbstractIntegrationTest;
 import com.example.concert.domain.concert.entity.SeatStatus;
 import com.example.concert.domain.concert.infrastructure.ConcertJpaEntity;
 import com.example.concert.domain.concert.infrastructure.ConcertJpaRepository;
@@ -28,7 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ActiveProfiles("test")
 @Transactional
 @DisplayName("ExpireReservationUseCase 통합 테스트")
-class ExpireReservationUseCaseIntegrationTest {
+class ExpireReservationUseCaseIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private ExpireReservationUseCase expireReservationUseCase;

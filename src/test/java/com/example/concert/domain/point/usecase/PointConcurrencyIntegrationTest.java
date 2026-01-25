@@ -1,6 +1,7 @@
 package com.example.concert.domain.point.usecase;
 
 import com.example.concert.common.exception.ConcurrencyConflictException;
+import com.example.concert.config.AbstractIntegrationTest;
 import com.example.concert.domain.point.infrastructure.PointJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -23,7 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @ActiveProfiles("test")
 @DisplayName("포인트 동시성 통합 테스트")
-class PointConcurrencyIntegrationTest {
+class PointConcurrencyIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private ChargePointUseCase chargePointUseCase;

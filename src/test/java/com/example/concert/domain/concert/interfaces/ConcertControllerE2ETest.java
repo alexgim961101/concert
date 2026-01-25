@@ -1,5 +1,6 @@
 package com.example.concert.domain.concert.interfaces;
 
+import com.example.concert.config.AbstractIntegrationTest;
 import com.example.concert.domain.concert.entity.SeatStatus;
 import com.example.concert.domain.concert.infrastructure.*;
 import com.example.concert.domain.queue.entity.TokenStatus;
@@ -30,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @Transactional
 @DisplayName("ConcertController E2E 테스트")
-class ConcertControllerE2ETest {
+class ConcertControllerE2ETest extends AbstractIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;

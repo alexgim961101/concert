@@ -1,8 +1,9 @@
 package com.example.concert.domain.concert.usecase;
 
-import com.example.concert.domain.concert.entity.Seat;
 import com.example.concert.domain.concert.entity.SeatStatus;
-import com.example.concert.domain.concert.repository.SeatRepository;
+import com.example.concert.domain.concert.service.ConcertService;
+import com.example.concert.domain.concert.service.ConcertService.SeatInfo;
+import com.example.concert.domain.concert.service.ConcertService.SeatsResult;
 import com.example.concert.domain.queue.usecase.TokenNotFoundException;
 import com.example.concert.domain.queue.usecase.ValidateTokenUseCase;
 import org.junit.jupiter.api.DisplayName;
@@ -27,7 +28,7 @@ class GetSeatsUseCaseTest {
     private ValidateTokenUseCase validateTokenUseCase;
 
     @Mock
-    private SeatRepository seatRepository;
+    private ConcertService concertService;
 
     @InjectMocks
     private GetSeatsUseCase getSeatsUseCase;
@@ -43,10 +44,11 @@ class GetSeatsUseCaseTest {
         @DisplayName("상태 파라미터 없이 호출 시 전체 좌석 조회")
         void shouldReturnAllSeats_WhenNoStatusProvided() {
             // given
-            List<Seat> allSeats = List.of(
-                    new Seat(1L, SCHEDULE_ID, 1, BigDecimal.valueOf(10000), SeatStatus.AVAILABLE, 0L, null, null),
-                    new Seat(2L, SCHEDULE_ID, 2, BigDecimal.valueOf(10000), SeatStatus.RESERVED, 0L, null, null));
-            when(seatRepository.findAllByScheduleId(SCHEDULE_ID)).thenReturn(allSeats);
+            List<SeatInfo> allSeats = List.of(
+                    new SeatInfo(1L, 1, SeatStatus.AVAILABLE, BigDecimal.valueOf(10000)),
+                    new SeatInfo(2L, 2, SeatStatus.RESERVED, BigDecimal.valueOf(10000)));
+            SeatsResult seatsResult = new SeatsResult(SCHEDULE_ID, allSeats);
+            when(concertService.getSeats(SCHEDULE_ID, null)).thenReturn(seatsResult);
 
             // when
             GetSeatsUseCase.SeatsResult result = getSeatsUseCase.execute(VALID_TOKEN, SCHEDULE_ID, null);
@@ -55,8 +57,7 @@ class GetSeatsUseCaseTest {
             assertThat(result.scheduleId()).isEqualTo(SCHEDULE_ID);
             assertThat(result.seats()).hasSize(2);
             verify(validateTokenUseCase).execute(VALID_TOKEN);
-            verify(seatRepository).findAllByScheduleId(SCHEDULE_ID);
-            verify(seatRepository, never()).findAllByScheduleIdAndStatusIn(anyLong(), anyList());
+            verify(concertService).getSeats(SCHEDULE_ID, null);
         }
 
         @Test
@@ -64,9 +65,10 @@ class GetSeatsUseCaseTest {
         void shouldReturnFilteredSeats_WhenStatusProvided() {
             // given
             List<SeatStatus> statuses = List.of(SeatStatus.AVAILABLE);
-            List<Seat> availableSeats = List.of(
-                    new Seat(1L, SCHEDULE_ID, 1, BigDecimal.valueOf(10000), SeatStatus.AVAILABLE, 0L, null, null));
-            when(seatRepository.findAllByScheduleIdAndStatusIn(SCHEDULE_ID, statuses)).thenReturn(availableSeats);
+            List<SeatInfo> availableSeats = List.of(
+                    new SeatInfo(1L, 1, SeatStatus.AVAILABLE, BigDecimal.valueOf(10000)));
+            SeatsResult seatsResult = new SeatsResult(SCHEDULE_ID, availableSeats);
+            when(concertService.getSeats(SCHEDULE_ID, statuses)).thenReturn(seatsResult);
 
             // when
             GetSeatsUseCase.SeatsResult result = getSeatsUseCase.execute(VALID_TOKEN, SCHEDULE_ID, statuses);
@@ -74,23 +76,23 @@ class GetSeatsUseCaseTest {
             // then
             assertThat(result.seats()).hasSize(1);
             assertThat(result.seats().get(0).status()).isEqualTo(SeatStatus.AVAILABLE);
-            verify(seatRepository).findAllByScheduleIdAndStatusIn(SCHEDULE_ID, statuses);
-            verify(seatRepository, never()).findAllByScheduleId(anyLong());
+            verify(concertService).getSeats(SCHEDULE_ID, statuses);
         }
 
         @Test
         @DisplayName("빈 상태 리스트 전달 시 전체 좌석 조회")
         void shouldReturnAllSeats_WhenEmptyStatusList() {
             // given
-            List<Seat> allSeats = List.of(
-                    new Seat(1L, SCHEDULE_ID, 1, BigDecimal.valueOf(10000), SeatStatus.AVAILABLE, 0L, null, null));
-            when(seatRepository.findAllByScheduleId(SCHEDULE_ID)).thenReturn(allSeats);
+            List<SeatInfo> allSeats = List.of(
+                    new SeatInfo(1L, 1, SeatStatus.AVAILABLE, BigDecimal.valueOf(10000)));
+            SeatsResult seatsResult = new SeatsResult(SCHEDULE_ID, allSeats);
+            when(concertService.getSeats(SCHEDULE_ID, List.of())).thenReturn(seatsResult);
 
             // when
             GetSeatsUseCase.SeatsResult result = getSeatsUseCase.execute(VALID_TOKEN, SCHEDULE_ID, List.of());
 
             // then
-            verify(seatRepository).findAllByScheduleId(SCHEDULE_ID);
+            verify(concertService).getSeats(SCHEDULE_ID, List.of());
         }
     }
 
@@ -109,7 +111,7 @@ class GetSeatsUseCaseTest {
             assertThatThrownBy(() -> getSeatsUseCase.execute("invalid-token", SCHEDULE_ID, null))
                     .isInstanceOf(TokenNotFoundException.class);
 
-            verify(seatRepository, never()).findAllByScheduleId(anyLong());
+            verify(concertService, never()).getSeats(anyLong(), anyList());
         }
     }
 }

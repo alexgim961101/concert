@@ -1,5 +1,6 @@
 package com.example.concert.benchmark;
 
+import com.example.concert.config.AbstractIntegrationTest;
 import com.example.concert.domain.concert.entity.SeatStatus;
 import com.example.concert.domain.concert.infrastructure.ConcertJpaEntity;
 import com.example.concert.domain.concert.infrastructure.ConcertJpaRepository;
@@ -49,7 +50,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DisplayName("인덱스 성능 벤치마크 테스트 (100만 건)")
-class PerformanceBenchmarkTest {
+class PerformanceBenchmarkTest extends AbstractIntegrationTest {
 
     @Autowired
     private ConcertJpaRepository concertJpaRepository;

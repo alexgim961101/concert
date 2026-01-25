@@ -1,9 +1,9 @@
 package com.example.concert.domain.concert.usecase;
 
-import com.example.concert.domain.concert.entity.ConcertSchedule;
-import com.example.concert.domain.concert.entity.SeatStatus;
 import com.example.concert.domain.concert.repository.ConcertScheduleRepository;
-import com.example.concert.domain.concert.repository.SeatRepository;
+import com.example.concert.domain.concert.service.ConcertService;
+import com.example.concert.domain.concert.service.ConcertService.ScheduleInfo;
+import com.example.concert.domain.concert.service.ConcertService.SchedulesWithSeatsResult;
 import com.example.concert.domain.queue.usecase.ValidateTokenUseCase;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -13,11 +13,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,14 +32,10 @@ class GetAvailableDatesUseCaseTest {
     private ConcertScheduleRepository concertScheduleRepository;
 
     @Mock
-    private SeatRepository seatRepository;
+    private ConcertService concertService;
 
     @InjectMocks
     private GetAvailableDatesUseCase getAvailableDatesUseCase;
-
-    private ConcertSchedule createSchedule(Long id, Long concertId, LocalDateTime concertDate) {
-        return new ConcertSchedule(id, concertId, concertDate, LocalDateTime.now().minusDays(1), null, null);
-    }
 
     @Nested
     @DisplayName("성공 케이스")
@@ -52,12 +49,12 @@ class GetAvailableDatesUseCaseTest {
             when(validateTokenUseCase.execute(token)).thenReturn(null);
             when(concertScheduleRepository.existsConcertById(concertId)).thenReturn(true);
 
-            ConcertSchedule schedule1 = createSchedule(1L, concertId, LocalDateTime.of(2024, 5, 1, 19, 0));
-            ConcertSchedule schedule2 = createSchedule(2L, concertId, LocalDateTime.of(2024, 5, 2, 19, 0));
-            when(concertScheduleRepository.findByConcertId(concertId)).thenReturn(List.of(schedule1, schedule2));
-
-            when(seatRepository.countByScheduleIdAndStatus(1L, SeatStatus.AVAILABLE)).thenReturn(50);
-            when(seatRepository.countByScheduleIdAndStatus(2L, SeatStatus.AVAILABLE)).thenReturn(0);
+            // ConcertService 모킹
+            List<ScheduleInfo> scheduleInfos = List.of(
+                    new ScheduleInfo(1L, LocalDate.of(2024, 5, 1), 50),
+                    new ScheduleInfo(2L, LocalDate.of(2024, 5, 2), 0));
+            SchedulesWithSeatsResult serviceResult = new SchedulesWithSeatsResult(concertId, scheduleInfos);
+            when(concertService.getSchedulesWithSeats(concertId)).thenReturn(serviceResult);
 
             GetAvailableDatesUseCase.AvailableDatesResult result = getAvailableDatesUseCase.execute(token, concertId);
 
@@ -65,6 +62,9 @@ class GetAvailableDatesUseCaseTest {
             assertThat(result.schedules()).hasSize(2);
             assertThat(result.schedules().get(0).availableSeats()).isEqualTo(50);
             assertThat(result.schedules().get(1).availableSeats()).isEqualTo(0);
+
+            verify(validateTokenUseCase).execute(token);
+            verify(concertService).getSchedulesWithSeats(concertId);
         }
 
         @Test
@@ -75,7 +75,10 @@ class GetAvailableDatesUseCaseTest {
 
             when(validateTokenUseCase.execute(token)).thenReturn(null);
             when(concertScheduleRepository.existsConcertById(concertId)).thenReturn(true);
-            when(concertScheduleRepository.findByConcertId(concertId)).thenReturn(List.of());
+
+            // 빈 스케줄 반환
+            SchedulesWithSeatsResult serviceResult = new SchedulesWithSeatsResult(concertId, List.of());
+            when(concertService.getSchedulesWithSeats(concertId)).thenReturn(serviceResult);
 
             GetAvailableDatesUseCase.AvailableDatesResult result = getAvailableDatesUseCase.execute(token, concertId);
 

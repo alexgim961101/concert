@@ -3,6 +3,7 @@ package com.example.concert.domain.reservation.usecase;
 import com.example.concert.domain.concert.entity.Seat;
 import com.example.concert.domain.concert.repository.ConcertScheduleRepository;
 import com.example.concert.domain.concert.repository.SeatRepository;
+import com.example.concert.domain.concert.service.ConcertService;
 import com.example.concert.domain.queue.usecase.ValidateTokenUseCase;
 import com.example.concert.domain.reservation.entity.Reservation;
 import com.example.concert.domain.reservation.entity.ReservationStatus;
@@ -20,6 +21,7 @@ public class ReserveSeatUseCase {
     private final ConcertScheduleRepository scheduleRepository;
     private final SeatRepository seatRepository;
     private final ReservationRepository reservationRepository;
+    private final ConcertService concertService;
 
     @Transactional
     public ReservationResult execute(String token, Long userId, Long scheduleId, Long seatId) {
@@ -48,6 +50,9 @@ public class ReserveSeatUseCase {
         // 6. 예약 생성 및 저장
         Reservation reservation = Reservation.create(userId, scheduleId, seatId);
         Reservation saved = reservationRepository.save(reservation);
+
+        // 7. 캐시 갱신 (Write-Through) - Stampede 방지
+        concertService.refreshSeatsCache(scheduleId);
 
         return new ReservationResult(
                 saved.getId(),

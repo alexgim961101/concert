@@ -27,4 +27,11 @@ public class ConcertScheduleRepositoryImpl implements ConcertScheduleRepository 
     public boolean existsById(Long scheduleId) {
         return jpaRepository.existsById(scheduleId);
     }
+
+    @Override
+    public List<Long> findUpcomingConcertIds(int daysAhead) {
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.LocalDateTime endDate = now.plusDays(daysAhead);
+        return jpaRepository.findUpcomingConcertIds(now, endDate);
+    }
 }

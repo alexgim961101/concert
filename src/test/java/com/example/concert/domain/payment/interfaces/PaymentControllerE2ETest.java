@@ -1,5 +1,6 @@
 package com.example.concert.domain.payment.interfaces;
 
+import com.example.concert.config.AbstractIntegrationTest;
 import com.example.concert.domain.concert.entity.SeatStatus;
 import com.example.concert.domain.concert.infrastructure.*;
 import com.example.concert.domain.point.infrastructure.PointJpaEntity;
@@ -37,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @Transactional
 @DisplayName("PaymentController E2E 테스트")
-class PaymentControllerE2ETest {
+class PaymentControllerE2ETest extends AbstractIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;

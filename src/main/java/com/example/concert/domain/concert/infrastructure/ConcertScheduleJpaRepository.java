@@ -11,4 +11,8 @@ public interface ConcertScheduleJpaRepository extends JpaRepository<ConcertSched
 
     @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END FROM ConcertJpaEntity c WHERE c.id = :concertId")
     boolean existsConcertById(@Param("concertId") Long concertId);
+
+    @Query("SELECT DISTINCT cs.concert.id FROM ConcertScheduleJpaEntity cs WHERE cs.concertDate >= :startDate AND cs.concertDate < :endDate")
+    List<Long> findUpcomingConcertIds(@Param("startDate") java.time.LocalDateTime startDate,
+            @Param("endDate") java.time.LocalDateTime endDate);
 }

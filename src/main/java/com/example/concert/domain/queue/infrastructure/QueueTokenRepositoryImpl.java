@@ -41,4 +41,19 @@ public class QueueTokenRepositoryImpl implements QueueTokenRepository {
     public long countByStatusAndConcertIdAndIdLessThan(TokenStatus status, Long concertId, Long id) {
         return jpaRepository.countByStatusAndConcertIdAndIdLessThan(status, concertId, id);
     }
+
+    @Override
+    public long countByStatusAndConcertId(TokenStatus status, Long concertId) {
+        return jpaRepository.countByStatusAndConcertId(status, concertId);
+    }
+
+    @Override
+    public java.util.List<QueueToken> findTopNByStatusAndConcertIdOrderByIdAsc(TokenStatus status, Long concertId,
+            int limit) {
+        return jpaRepository.findTopByStatusAndConcertIdOrderByIdAsc(
+                status, concertId, org.springframework.data.domain.PageRequest.of(0, limit))
+                .stream()
+                .map(QueueTokenMapper::toDomain)
+                .toList();
+    }
 }

@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 public class IssueTokenUseCase {
     private static final int TOKEN_EXPIRY_MINUTES = 30;
     private static final int ESTIMATED_PROCESSING_TIME_PER_USER_SECONDS = 2;
+    private static final int MAX_ACTIVE_TOKENS_PER_CONCERT = 50;
 
     private final QueueTokenRepository queueTokenRepository;
 
@@ -26,13 +27,24 @@ public class IssueTokenUseCase {
             throw new IllegalArgumentException("concertId cannot be null");
         }
 
+        long activeCount = queueTokenRepository.countByStatusAndConcertId(TokenStatus.ACTIVE, concertId);
+        boolean shouldActivateImmediately = activeCount < MAX_ACTIVE_TOKENS_PER_CONCERT;
+
         LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(TOKEN_EXPIRY_MINUTES);
         QueueToken queueToken = new QueueToken(userId, concertId, expiresAt);
 
+        if (shouldActivateImmediately) {
+            queueToken.activate();
+        }
+
         QueueToken savedToken = queueTokenRepository.save(queueToken);
 
-        long rank = queueTokenRepository.countByStatusAndConcertIdAndIdLessThan(
-                TokenStatus.WAITING, concertId, savedToken.getId()) + 1;
+        long rank = 0;
+        if (savedToken.getStatus() == TokenStatus.WAITING) {
+            rank = queueTokenRepository.countByStatusAndConcertIdAndIdLessThan(
+                    TokenStatus.WAITING, concertId, savedToken.getId()) + 1;
+        }
+
         long estimatedWaitTime = rank * ESTIMATED_PROCESSING_TIME_PER_USER_SECONDS;
 
         return new IssueTokenResult(

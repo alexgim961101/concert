@@ -45,29 +45,36 @@ class IssueTokenUseCaseTest {
         void shouldIssueToken_whenQueueIsEmpty() {
             Long userId = 1L;
             Long concertId = 1L;
-            QueueToken savedToken = createSavedToken(1L, userId, concertId, "uuid-token");
+            // 즉시 활성화 되므로 ACTIVE 상태여야 함
+            QueueToken savedToken = new QueueToken(1L, userId, concertId, "uuid-token", TokenStatus.ACTIVE,
+                    LocalDateTime.now().plusMinutes(30), LocalDateTime.now());
 
             when(queueTokenRepository.save(any(QueueToken.class))).thenReturn(savedToken);
-            when(queueTokenRepository.countByStatusAndConcertIdAndIdLessThan(eq(TokenStatus.WAITING), eq(concertId),
-                    eq(1L))).thenReturn(0L);
+            // Active 토큰이 0개 -> 50개 미만이므로 즉시 활성화
+            when(queueTokenRepository.countByStatusAndConcertId(eq(TokenStatus.ACTIVE), eq(concertId))).thenReturn(0L);
 
             IssueTokenUseCase.IssueTokenResult result = issueTokenUseCase.execute(userId, concertId);
 
             assertThat(result).isNotNull();
             assertThat(result.token()).isEqualTo("uuid-token");
-            assertThat(result.status()).isEqualTo("WAITING");
-            assertThat(result.rank()).isEqualTo(1L);
-            assertThat(result.estimatedWaitTime()).isEqualTo(2L); // 1 * 2 seconds
+            assertThat(result.status()).isEqualTo("ACTIVE");
+            assertThat(result.rank()).isEqualTo(0L); // ACTIVE라 rank 0
+            assertThat(result.estimatedWaitTime()).isEqualTo(0L); // ACTIVE라 waitTime 0
         }
 
         @Test
-        @DisplayName("토큰 발급 - 대기열에 5명이 있는 경우 rank는 6")
-        void shouldIssueToken_whenQueueHas5Users() {
+        @DisplayName("토큰 발급 - 활성 슬롯이 꽉 찬 경우 -> WAITING 상태 및 대기열 순위 반환")
+        void shouldReturnWaitingRank_whenSlotsFull() {
             Long userId = 6L;
             Long concertId = 1L;
             QueueToken savedToken = createSavedToken(6L, userId, concertId, "uuid-token-6");
 
             when(queueTokenRepository.save(any(QueueToken.class))).thenReturn(savedToken);
+
+            // Active가 50개 꽉 차있다고 가정 -> WAITING 상태 유지
+            when(queueTokenRepository.countByStatusAndConcertId(eq(TokenStatus.ACTIVE), eq(concertId))).thenReturn(50L);
+
+            // 내 앞에 대기자 5명 존재
             when(queueTokenRepository.countByStatusAndConcertIdAndIdLessThan(eq(TokenStatus.WAITING), eq(concertId),
                     eq(6L))).thenReturn(5L);
 
@@ -75,16 +82,19 @@ class IssueTokenUseCaseTest {
 
             assertThat(result.rank()).isEqualTo(6L);
             assertThat(result.estimatedWaitTime()).isEqualTo(12L); // 6 * 2 seconds
+            assertThat(result.status()).isEqualTo("WAITING");
         }
 
         @Test
-        @DisplayName("토큰 발급 시 QueueToken이 WAITING 상태로 저장됨")
-        void shouldSaveToken_withWaitingStatus() {
+        @DisplayName("토큰 발급 시 QueueToken이 WAITING 상태로 저장됨 (슬롯 부족 시)")
+        void shouldSaveToken_withWaitingStatus_whenSlotsFull() {
             Long userId = 1L;
             Long concertId = 1L;
             QueueToken savedToken = createSavedToken(1L, userId, concertId, "uuid-token");
 
             when(queueTokenRepository.save(any(QueueToken.class))).thenReturn(savedToken);
+            // Active가 50개 꽉 차있음
+            when(queueTokenRepository.countByStatusAndConcertId(any(), any())).thenReturn(50L);
             when(queueTokenRepository.countByStatusAndConcertIdAndIdLessThan(any(), any(), any())).thenReturn(0L);
 
             issueTokenUseCase.execute(userId, concertId);
@@ -95,7 +105,7 @@ class IssueTokenUseCaseTest {
             QueueToken capturedToken = captor.getValue();
             assertThat(capturedToken.getUserId()).isEqualTo(userId);
             assertThat(capturedToken.getConcertId()).isEqualTo(concertId);
-            assertThat(capturedToken.getStatus()).isEqualTo(TokenStatus.WAITING);
+            assertThat(capturedToken.getStatus()).isEqualTo(TokenStatus.WAITING); // 초기 생성 시 WAITING
             assertThat(capturedToken.getToken()).isNotBlank();
         }
     }

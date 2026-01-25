@@ -12,4 +12,8 @@ public interface QueueTokenRepository {
     long countByStatusAndIdLessThan(TokenStatus status, Long id);
 
     long countByStatusAndConcertIdAndIdLessThan(TokenStatus status, Long concertId, Long id);
+
+    long countByStatusAndConcertId(TokenStatus status, Long concertId);
+
+    java.util.List<QueueToken> findTopNByStatusAndConcertIdOrderByIdAsc(TokenStatus status, Long concertId, int limit);
 }

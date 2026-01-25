@@ -72,7 +72,8 @@ class GetTokenStatusUseCaseTest {
             String tokenValue = "waiting-token";
             QueueToken waitingToken = createToken(10L, TokenStatus.WAITING);
             when(queueTokenRepository.findByToken(tokenValue)).thenReturn(Optional.of(waitingToken));
-            when(queueTokenRepository.countByStatusAndIdLessThan(eq(TokenStatus.WAITING), eq(10L))).thenReturn(3L);
+            when(queueTokenRepository.countByStatusAndConcertIdAndIdLessThan(eq(TokenStatus.WAITING), eq(1L), eq(10L)))
+                    .thenReturn(3L);
 
             GetTokenStatusUseCase.TokenStatusResult result = getTokenStatusUseCase.execute(tokenValue);
 
@@ -87,7 +88,8 @@ class GetTokenStatusUseCaseTest {
             String tokenValue = "first-waiting-token";
             QueueToken waitingToken = createToken(1L, TokenStatus.WAITING);
             when(queueTokenRepository.findByToken(tokenValue)).thenReturn(Optional.of(waitingToken));
-            when(queueTokenRepository.countByStatusAndIdLessThan(eq(TokenStatus.WAITING), eq(1L))).thenReturn(0L);
+            when(queueTokenRepository.countByStatusAndConcertIdAndIdLessThan(eq(TokenStatus.WAITING), eq(1L), eq(1L)))
+                    .thenReturn(0L);
 
             GetTokenStatusUseCase.TokenStatusResult result = getTokenStatusUseCase.execute(tokenValue);
 

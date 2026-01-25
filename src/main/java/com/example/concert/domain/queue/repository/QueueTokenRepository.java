@@ -10,4 +10,6 @@ public interface QueueTokenRepository {
     QueueToken save(QueueToken queueToken);
 
     long countByStatusAndIdLessThan(TokenStatus status, Long id);
+
+    long countByStatusAndConcertIdAndIdLessThan(TokenStatus status, Long concertId, Long id);
 }

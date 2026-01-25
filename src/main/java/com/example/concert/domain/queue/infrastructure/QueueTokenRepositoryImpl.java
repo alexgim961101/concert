@@ -36,4 +36,9 @@ public class QueueTokenRepositoryImpl implements QueueTokenRepository {
     public long countByStatusAndIdLessThan(TokenStatus status, Long id) {
         return jpaRepository.countByStatusAndIdLessThan(status, id);
     }
+
+    @Override
+    public long countByStatusAndConcertIdAndIdLessThan(TokenStatus status, Long concertId, Long id) {
+        return jpaRepository.countByStatusAndConcertIdAndIdLessThan(status, concertId, id);
+    }
 }

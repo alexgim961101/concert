@@ -31,7 +31,8 @@ public class IssueTokenUseCase {
 
         QueueToken savedToken = queueTokenRepository.save(queueToken);
 
-        long rank = queueTokenRepository.countByStatusAndIdLessThan(TokenStatus.WAITING, savedToken.getId()) + 1;
+        long rank = queueTokenRepository.countByStatusAndConcertIdAndIdLessThan(
+                TokenStatus.WAITING, concertId, savedToken.getId()) + 1;
         long estimatedWaitTime = rank * ESTIMATED_PROCESSING_TIME_PER_USER_SECONDS;
 
         return new IssueTokenResult(

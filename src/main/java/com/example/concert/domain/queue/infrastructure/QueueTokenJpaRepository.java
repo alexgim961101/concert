@@ -8,4 +8,6 @@ public interface QueueTokenJpaRepository extends JpaRepository<QueueTokenJpaEnti
     Optional<QueueTokenJpaEntity> findByToken(String token);
 
     long countByStatusAndIdLessThan(TokenStatus status, Long id);
+
+    long countByStatusAndConcertIdAndIdLessThan(TokenStatus status, Long concertId, Long id);
 }

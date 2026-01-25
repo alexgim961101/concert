@@ -48,7 +48,8 @@ class IssueTokenUseCaseTest {
             QueueToken savedToken = createSavedToken(1L, userId, concertId, "uuid-token");
 
             when(queueTokenRepository.save(any(QueueToken.class))).thenReturn(savedToken);
-            when(queueTokenRepository.countByStatusAndIdLessThan(eq(TokenStatus.WAITING), eq(1L))).thenReturn(0L);
+            when(queueTokenRepository.countByStatusAndConcertIdAndIdLessThan(eq(TokenStatus.WAITING), eq(concertId),
+                    eq(1L))).thenReturn(0L);
 
             IssueTokenUseCase.IssueTokenResult result = issueTokenUseCase.execute(userId, concertId);
 
@@ -67,7 +68,8 @@ class IssueTokenUseCaseTest {
             QueueToken savedToken = createSavedToken(6L, userId, concertId, "uuid-token-6");
 
             when(queueTokenRepository.save(any(QueueToken.class))).thenReturn(savedToken);
-            when(queueTokenRepository.countByStatusAndIdLessThan(eq(TokenStatus.WAITING), eq(6L))).thenReturn(5L);
+            when(queueTokenRepository.countByStatusAndConcertIdAndIdLessThan(eq(TokenStatus.WAITING), eq(concertId),
+                    eq(6L))).thenReturn(5L);
 
             IssueTokenUseCase.IssueTokenResult result = issueTokenUseCase.execute(userId, concertId);
 
@@ -83,7 +85,7 @@ class IssueTokenUseCaseTest {
             QueueToken savedToken = createSavedToken(1L, userId, concertId, "uuid-token");
 
             when(queueTokenRepository.save(any(QueueToken.class))).thenReturn(savedToken);
-            when(queueTokenRepository.countByStatusAndIdLessThan(any(), any())).thenReturn(0L);
+            when(queueTokenRepository.countByStatusAndConcertIdAndIdLessThan(any(), any(), any())).thenReturn(0L);
 
             issueTokenUseCase.execute(userId, concertId);
 

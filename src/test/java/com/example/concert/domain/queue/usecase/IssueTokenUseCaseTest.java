@@ -74,13 +74,12 @@ class IssueTokenUseCaseTest {
             // Active가 50개 꽉 차있다고 가정 -> WAITING 상태 유지
             when(queueTokenRepository.countByStatusAndConcertId(eq(TokenStatus.ACTIVE), eq(concertId))).thenReturn(50L);
 
-            // 내 앞에 대기자 5명 존재
-            when(queueTokenRepository.countByStatusAndConcertIdAndIdLessThan(eq(TokenStatus.WAITING), eq(concertId),
-                    eq(6L))).thenReturn(5L);
+            // Redis ZRANK 기반 순위 조회 (0-indexed, 5는 6번째)
+            when(queueTokenRepository.getRankByToken(eq("uuid-token-6"), eq(concertId))).thenReturn(5L);
 
             IssueTokenUseCase.IssueTokenResult result = issueTokenUseCase.execute(userId, concertId);
 
-            assertThat(result.rank()).isEqualTo(6L);
+            assertThat(result.rank()).isEqualTo(6L); // 0-indexed 5 + 1 = 6
             assertThat(result.estimatedWaitTime()).isEqualTo(12L); // 6 * 2 seconds
             assertThat(result.status()).isEqualTo("WAITING");
         }
@@ -95,7 +94,7 @@ class IssueTokenUseCaseTest {
             when(queueTokenRepository.save(any(QueueToken.class))).thenReturn(savedToken);
             // Active가 50개 꽉 차있음
             when(queueTokenRepository.countByStatusAndConcertId(any(), any())).thenReturn(50L);
-            when(queueTokenRepository.countByStatusAndConcertIdAndIdLessThan(any(), any(), any())).thenReturn(0L);
+            when(queueTokenRepository.getRankByToken(any(), any())).thenReturn(0L);
 
             issueTokenUseCase.execute(userId, concertId);
 

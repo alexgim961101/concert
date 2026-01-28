@@ -5,11 +5,9 @@ import com.example.concert.domain.queue.entity.TokenStatus;
 import com.example.concert.domain.queue.repository.QueueTokenRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class GetTokenStatusUseCase {
         private static final int ESTIMATED_PROCESSING_TIME_PER_USER_SECONDS = 2;
 
@@ -35,8 +33,9 @@ public class GetTokenStatusUseCase {
                                         0,
                                         0);
                         case WAITING -> {
-                                long rank = queueTokenRepository.countByStatusAndConcertIdAndIdLessThan(
-                                                TokenStatus.WAITING, queueToken.getConcertId(), queueToken.getId()) + 1;
+                                // Redis ZRANK로 순위 조회 (0-indexed → 1-indexed)
+                                Long zrank = queueTokenRepository.getRankByToken(token, queueToken.getConcertId());
+                                long rank = zrank != null ? zrank + 1 : 1;
                                 long estimatedWaitTime = rank * ESTIMATED_PROCESSING_TIME_PER_USER_SECONDS;
                                 yield new TokenStatusResult(
                                                 queueToken.getToken(),

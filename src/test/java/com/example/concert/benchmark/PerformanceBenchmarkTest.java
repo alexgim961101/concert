@@ -10,9 +10,6 @@ import com.example.concert.domain.concert.infrastructure.SeatJpaEntity;
 import com.example.concert.domain.concert.infrastructure.SeatJpaRepository;
 import com.example.concert.domain.point.infrastructure.PointJpaEntity;
 import com.example.concert.domain.point.infrastructure.PointJpaRepository;
-import com.example.concert.domain.queue.entity.TokenStatus;
-import com.example.concert.domain.queue.infrastructure.QueueTokenJpaEntity;
-import com.example.concert.domain.queue.infrastructure.QueueTokenJpaRepository;
 import com.example.concert.domain.reservation.entity.ReservationStatus;
 import com.example.concert.domain.reservation.infrastructure.ReservationJpaEntity;
 import com.example.concert.domain.reservation.infrastructure.ReservationJpaRepository;
@@ -25,7 +22,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,11 +29,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * 인덱스 추가 전후 성능 비교를 위한 벤치마크 테스트.
  * 
+ * Note: 대기열 토큰은 Redis로 마이그레이션되어 DB 벤치마크에서 제외됨.
+ * 
  * 데이터 규모 (100만 건):
  * - 콘서트: 100개
  * - 스케줄: 10,000개 (콘서트당 100개)
  * - 좌석: 1,000,000개 (스케줄당 100개)
- * - 대기열 토큰: 1,000,000개
  * - 예약: 500,000개
  * - 포인트: 500,000개
  * 
@@ -62,27 +59,21 @@ class PerformanceBenchmarkTest extends AbstractIntegrationTest {
     private SeatJpaRepository seatJpaRepository;
 
     @Autowired
-    private QueueTokenJpaRepository queueTokenJpaRepository;
-
-    @Autowired
     private ReservationJpaRepository reservationJpaRepository;
 
     @Autowired
     private PointJpaRepository pointJpaRepository;
 
-    // 100만 건 규모
+    // 100만 건 규모 (대기열 토큰은 Redis로 이동)
     private static final int CONCERT_COUNT = 100;
     private static final int SCHEDULES_PER_CONCERT = 100;
     private static final int SEATS_PER_SCHEDULE = 100;
-    private static final int TOKEN_COUNT = 1_000_000;
     private static final int RESERVATION_COUNT = 500_000;
     private static final int POINT_COUNT = 500_000;
     private static final int BENCHMARK_ITERATIONS = 100;
     private static final int BATCH_SIZE = 10_000;
 
     private List<Long> scheduleIds = new ArrayList<>();
-    private List<String> tokenValues = new ArrayList<>();
-    private List<Long> tokenIds = new ArrayList<>();
     private List<Long> userIds = new ArrayList<>();
 
     @BeforeAll
@@ -138,40 +129,7 @@ class PerformanceBenchmarkTest extends AbstractIntegrationTest {
         }
         System.out.println("좌석 " + seatCount + "개 생성 완료");
 
-        // 4. 대기열 토큰 생성 (Batch Insert)
-        List<QueueTokenJpaEntity> tokenBatch = new ArrayList<>();
-        for (int i = 0; i < TOKEN_COUNT; i++) {
-            TokenStatus status = randomTokenStatus();
-            LocalDateTime expiresAt = status == TokenStatus.EXPIRED
-                    ? LocalDateTime.now().minusHours(1)
-                    : LocalDateTime.now().plusMinutes(30);
-
-            String token = UUID.randomUUID().toString();
-            QueueTokenJpaEntity entity = new QueueTokenJpaEntity(
-                    (long) i + 1,
-                    (long) (i % CONCERT_COUNT) + 1,
-                    token,
-                    status,
-                    expiresAt);
-            tokenBatch.add(entity);
-            tokenValues.add(token);
-
-            if (tokenBatch.size() >= BATCH_SIZE) {
-                List<QueueTokenJpaEntity> saved = queueTokenJpaRepository.saveAll(tokenBatch);
-                saved.forEach(e -> tokenIds.add(e.getId()));
-                tokenBatch.clear();
-                if ((i + 1) % 100_000 == 0) {
-                    System.out.println("대기열 토큰 " + (i + 1) + "개 생성 중...");
-                }
-            }
-        }
-        if (!tokenBatch.isEmpty()) {
-            List<QueueTokenJpaEntity> saved = queueTokenJpaRepository.saveAll(tokenBatch);
-            saved.forEach(e -> tokenIds.add(e.getId()));
-        }
-        System.out.println("대기열 토큰 " + TOKEN_COUNT + "개 생성 완료");
-
-        // 5. 예약 생성 (Batch Insert)
+        // 4. 예약 생성 (Batch Insert)
         List<ReservationJpaEntity> reservationBatch = new ArrayList<>();
         for (int i = 0; i < RESERVATION_COUNT; i++) {
             ReservationStatus status = randomReservationStatus();
@@ -202,7 +160,7 @@ class PerformanceBenchmarkTest extends AbstractIntegrationTest {
         }
         System.out.println("예약 " + RESERVATION_COUNT + "개 생성 완료");
 
-        // 6. 포인트 생성 (Batch Insert)
+        // 5. 포인트 생성 (Batch Insert)
         List<PointJpaEntity> pointBatch = new ArrayList<>();
         for (int i = 0; i < POINT_COUNT; i++) {
             PointJpaEntity point = new PointJpaEntity(
@@ -239,15 +197,6 @@ class PerformanceBenchmarkTest extends AbstractIntegrationTest {
         return SeatStatus.TEMP_RESERVED;
     }
 
-    private TokenStatus randomTokenStatus() {
-        double rand = ThreadLocalRandom.current().nextDouble();
-        if (rand < 0.6)
-            return TokenStatus.WAITING;
-        if (rand < 0.9)
-            return TokenStatus.ACTIVE;
-        return TokenStatus.EXPIRED;
-    }
-
     private ReservationStatus randomReservationStatus() {
         double rand = ThreadLocalRandom.current().nextDouble();
         if (rand < 0.4)
@@ -257,52 +206,11 @@ class PerformanceBenchmarkTest extends AbstractIntegrationTest {
         return ReservationStatus.CANCELLED;
     }
 
-    @Test
-    @Order(1)
-    @DisplayName("1. QueueToken - findByToken 성능 측정")
-    void benchmark_findByToken() {
-        List<String> sampleTokens = tokenValues.subList(0, Math.min(BENCHMARK_ITERATIONS, tokenValues.size()));
-
-        long totalTime = 0;
-        for (String token : sampleTokens) {
-            long start = System.nanoTime();
-            queueTokenJpaRepository.findByToken(token);
-            long end = System.nanoTime();
-            totalTime += (end - start);
-        }
-
-        double avgMs = (totalTime / (double) sampleTokens.size()) / 1_000_000.0;
-        System.out.printf("[findByToken] 평균 실행 시간: %.3f ms (총 %d회)%n", avgMs, sampleTokens.size());
-
-        assertThat(avgMs).as("findByToken should complete in reasonable time").isLessThan(1000);
-    }
+    // Note: QueueToken 관련 벤치마크는 Redis로 마이그레이션되어 제거됨
 
     @Test
     @Order(2)
-    @DisplayName("2. QueueToken - countByStatusAndIdLessThan 성능 측정 (인덱스 핵심 대상)")
-    void benchmark_countByStatusAndIdLessThan() {
-        List<Long> sampleIds = tokenIds.stream()
-                .filter(id -> id > TOKEN_COUNT / 4 && id < TOKEN_COUNT * 3 / 4)
-                .limit(BENCHMARK_ITERATIONS)
-                .toList();
-
-        long totalTime = 0;
-        for (Long id : sampleIds) {
-            long start = System.nanoTime();
-            queueTokenJpaRepository.countByStatusAndIdLessThan(TokenStatus.WAITING, id);
-            long end = System.nanoTime();
-            totalTime += (end - start);
-        }
-
-        double avgMs = (totalTime / (double) sampleIds.size()) / 1_000_000.0;
-        System.out.printf("[countByStatusAndIdLessThan] 평균 실행 시간: %.3f ms (총 %d회)%n", avgMs, sampleIds.size());
-
-        assertThat(avgMs).as("countByStatusAndIdLessThan should complete in reasonable time").isLessThan(5000);
-    }
-
-    @Test
-    @Order(3)
-    @DisplayName("3. Seat - findByScheduleIdAndStatusIn 성능 측정 (인덱스 핵심 대상)")
+    @DisplayName("2. Seat - findByScheduleIdAndStatusIn 성능 측정 (인덱스 핵심 대상)")
     void benchmark_findByScheduleIdAndStatusIn() {
         List<Long> sampleScheduleIds = scheduleIds.subList(0, Math.min(BENCHMARK_ITERATIONS, scheduleIds.size()));
 
@@ -321,8 +229,8 @@ class PerformanceBenchmarkTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @Order(4)
-    @DisplayName("4. Seat - countByScheduleIdAndStatus 성능 측정")
+    @Order(3)
+    @DisplayName("3. Seat - countByScheduleIdAndStatus 성능 측정")
     void benchmark_countByScheduleIdAndStatus() {
         List<Long> sampleScheduleIds = scheduleIds.subList(0, Math.min(BENCHMARK_ITERATIONS, scheduleIds.size()));
 
@@ -341,8 +249,8 @@ class PerformanceBenchmarkTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @Order(5)
-    @DisplayName("5. Reservation - findAllByStatusAndExpiresAtBefore 성능 측정 (인덱스 핵심 대상)")
+    @Order(4)
+    @DisplayName("4. Reservation - findAllByStatusAndExpiresAtBefore 성능 측정 (인덱스 핵심 대상)")
     void benchmark_findAllByStatusAndExpiresAtBefore() {
         long totalTime = 0;
         for (int i = 0; i < BENCHMARK_ITERATIONS; i++) {
@@ -362,8 +270,8 @@ class PerformanceBenchmarkTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @Order(6)
-    @DisplayName("6. Point - findByUserId 성능 측정")
+    @Order(5)
+    @DisplayName("5. Point - findByUserId 성능 측정")
     void benchmark_findByUserId() {
         List<Long> sampleUserIds = userIds.subList(0, Math.min(BENCHMARK_ITERATIONS, userIds.size()));
 
@@ -382,8 +290,8 @@ class PerformanceBenchmarkTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @Order(7)
-    @DisplayName("7. 전체 벤치마크 결과 요약")
+    @Order(6)
+    @DisplayName("6. 전체 벤치마크 결과 요약")
     void benchmark_summary() {
         System.out.println("\n========================================");
         System.out.println("   벤치마크 결과 요약 (100만 건 규모)");
@@ -392,7 +300,7 @@ class PerformanceBenchmarkTest extends AbstractIntegrationTest {
         System.out.printf("  - 콘서트: %,d개%n", CONCERT_COUNT);
         System.out.printf("  - 스케줄: %,d개%n", CONCERT_COUNT * SCHEDULES_PER_CONCERT);
         System.out.printf("  - 좌석: %,d개%n", CONCERT_COUNT * SCHEDULES_PER_CONCERT * SEATS_PER_SCHEDULE);
-        System.out.printf("  - 대기열 토큰: %,d개%n", TOKEN_COUNT);
+        System.out.println("  - 대기열 토큰: Redis로 이동됨");
         System.out.printf("  - 예약: %,d개%n", RESERVATION_COUNT);
         System.out.printf("  - 포인트: %,d개%n", POINT_COUNT);
         System.out.println("========================================");

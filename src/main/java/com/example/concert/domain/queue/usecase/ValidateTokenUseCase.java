@@ -4,11 +4,9 @@ import com.example.concert.domain.queue.entity.QueueToken;
 import com.example.concert.domain.queue.repository.QueueTokenRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class ValidateTokenUseCase {
     private final QueueTokenRepository queueTokenRepository;
 

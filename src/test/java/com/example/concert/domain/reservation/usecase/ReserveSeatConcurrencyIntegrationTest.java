@@ -1,16 +1,14 @@
 package com.example.concert.domain.reservation.usecase;
 
 import com.example.concert.config.AbstractIntegrationTest;
-import com.example.concert.domain.concert.entity.SeatStatus;
 import com.example.concert.domain.concert.infrastructure.ConcertJpaEntity;
 import com.example.concert.domain.concert.infrastructure.ConcertJpaRepository;
 import com.example.concert.domain.concert.infrastructure.ConcertScheduleJpaEntity;
 import com.example.concert.domain.concert.infrastructure.ConcertScheduleJpaRepository;
 import com.example.concert.domain.concert.infrastructure.SeatJpaEntity;
 import com.example.concert.domain.concert.infrastructure.SeatJpaRepository;
-import com.example.concert.domain.queue.entity.TokenStatus;
-import com.example.concert.domain.queue.infrastructure.QueueTokenJpaEntity;
-import com.example.concert.domain.queue.infrastructure.QueueTokenJpaRepository;
+import com.example.concert.domain.queue.entity.QueueToken;
+import com.example.concert.domain.queue.infrastructure.RedisQueueTokenRepositoryImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,7 +21,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -49,7 +46,7 @@ class ReserveSeatConcurrencyIntegrationTest extends AbstractIntegrationTest {
     private SeatJpaRepository seatJpaRepository;
 
     @Autowired
-    private QueueTokenJpaRepository tokenJpaRepository;
+    private RedisQueueTokenRepositoryImpl queueTokenRepository;
 
     private Long scheduleId;
     private Long seatId;
@@ -57,8 +54,7 @@ class ReserveSeatConcurrencyIntegrationTest extends AbstractIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        // 기존 데이터 정리
-        tokenJpaRepository.deleteAll();
+        // 기존 데이터 정리 (DB만)
         seatJpaRepository.deleteAll();
         scheduleJpaRepository.deleteAll();
         concertJpaRepository.deleteAll();
@@ -80,17 +76,13 @@ class ReserveSeatConcurrencyIntegrationTest extends AbstractIntegrationTest {
                 new SeatJpaEntity(schedule, 1, BigDecimal.valueOf(10000)));
         seatId = seat.getId();
 
-        // 토큰 10개 생성
+        // Redis 기반 토큰 10개 생성
         tokens.clear();
         for (int i = 1; i <= 10; i++) {
-            QueueTokenJpaEntity token = tokenJpaRepository.save(
-                    new QueueTokenJpaEntity(
-                            (long) i,
-                            concert.getId(),
-                            UUID.randomUUID().toString(),
-                            TokenStatus.ACTIVE,
-                            LocalDateTime.now().plusMinutes(30)));
-            tokens.add(token.getToken());
+            QueueToken token = new QueueToken((long) i, concert.getId(), LocalDateTime.now().plusMinutes(30));
+            token.activate();
+            QueueToken saved = queueTokenRepository.save(token);
+            tokens.add(saved.getToken());
         }
     }
 

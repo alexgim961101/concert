@@ -5,7 +5,6 @@ import com.example.concert.domain.queue.entity.TokenStatus;
 import com.example.concert.domain.queue.repository.QueueTokenRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
@@ -18,7 +17,6 @@ public class IssueTokenUseCase {
 
     private final QueueTokenRepository queueTokenRepository;
 
-    @Transactional
     public IssueTokenResult execute(Long userId, Long concertId) {
         if (userId == null) {
             throw new IllegalArgumentException("userId cannot be null");
@@ -41,8 +39,9 @@ public class IssueTokenUseCase {
 
         long rank = 0;
         if (savedToken.getStatus() == TokenStatus.WAITING) {
-            rank = queueTokenRepository.countByStatusAndConcertIdAndIdLessThan(
-                    TokenStatus.WAITING, concertId, savedToken.getId()) + 1;
+            // Redis ZRANK로 순위 조회 (0-indexed → 1-indexed)
+            Long zrank = queueTokenRepository.getRankByToken(savedToken.getToken(), concertId);
+            rank = zrank != null ? zrank + 1 : 1;
         }
 
         long estimatedWaitTime = rank * ESTIMATED_PROCESSING_TIME_PER_USER_SECONDS;

@@ -5,9 +5,8 @@ import com.example.concert.domain.concert.entity.SeatStatus;
 import com.example.concert.domain.concert.infrastructure.*;
 import com.example.concert.domain.point.infrastructure.PointJpaEntity;
 import com.example.concert.domain.point.infrastructure.PointJpaRepository;
-import com.example.concert.domain.queue.entity.TokenStatus;
-import com.example.concert.domain.queue.infrastructure.QueueTokenJpaEntity;
-import com.example.concert.domain.queue.infrastructure.QueueTokenJpaRepository;
+import com.example.concert.domain.queue.entity.QueueToken;
+import com.example.concert.domain.queue.infrastructure.RedisQueueTokenRepositoryImpl;
 import com.example.concert.domain.reservation.entity.ReservationStatus;
 import com.example.concert.domain.reservation.infrastructure.ReservationJpaEntity;
 import com.example.concert.domain.reservation.infrastructure.ReservationJpaRepository;
@@ -62,7 +61,7 @@ class PaymentControllerE2ETest extends AbstractIntegrationTest {
     private PointJpaRepository pointJpaRepository;
 
     @Autowired
-    private QueueTokenJpaRepository queueTokenJpaRepository;
+    private RedisQueueTokenRepositoryImpl queueTokenRepository;
 
     @Autowired
     private EntityManager entityManager;
@@ -102,11 +101,11 @@ class PaymentControllerE2ETest extends AbstractIntegrationTest {
         PointJpaEntity point = new PointJpaEntity(userId, new BigDecimal("50000"));
         pointJpaRepository.save(point);
 
-        // 토큰 생성 (ACTIVE)
-        token = "test-token-" + System.currentTimeMillis();
-        QueueTokenJpaEntity queueToken = new QueueTokenJpaEntity(
-                userId, 1L, token, TokenStatus.ACTIVE, LocalDateTime.now().plusMinutes(30));
-        queueTokenJpaRepository.save(queueToken);
+        // Redis 기반 토큰 생성
+        QueueToken queueToken = new QueueToken(userId, 1L, LocalDateTime.now().plusMinutes(30));
+        queueToken.activate();
+        QueueToken savedToken = queueTokenRepository.save(queueToken);
+        token = savedToken.getToken();
 
         entityManager.flush();
         entityManager.clear();

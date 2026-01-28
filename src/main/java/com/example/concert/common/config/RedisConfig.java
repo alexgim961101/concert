@@ -67,6 +67,24 @@ public class RedisConfig {
                 return template;
         }
 
+        /**
+         * 대기열 전용 RedisTemplate (String-based for simple queue operations)
+         */
+        @Bean
+        public RedisTemplate<String, String> queueRedisTemplate(RedisConnectionFactory connectionFactory) {
+                RedisTemplate<String, String> template = new RedisTemplate<>();
+                template.setConnectionFactory(connectionFactory);
+
+                StringRedisSerializer stringSerializer = new StringRedisSerializer();
+                template.setKeySerializer(stringSerializer);
+                template.setValueSerializer(stringSerializer);
+                template.setHashKeySerializer(stringSerializer);
+                template.setHashValueSerializer(stringSerializer);
+
+                template.afterPropertiesSet();
+                return template;
+        }
+
         @Bean
         public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
                 // JDK Serialization for record support

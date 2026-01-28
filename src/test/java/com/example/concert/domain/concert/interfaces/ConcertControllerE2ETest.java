@@ -3,9 +3,9 @@ package com.example.concert.domain.concert.interfaces;
 import com.example.concert.config.AbstractIntegrationTest;
 import com.example.concert.domain.concert.entity.SeatStatus;
 import com.example.concert.domain.concert.infrastructure.*;
+import com.example.concert.domain.queue.entity.QueueToken;
 import com.example.concert.domain.queue.entity.TokenStatus;
-import com.example.concert.domain.queue.infrastructure.QueueTokenJpaEntity;
-import com.example.concert.domain.queue.infrastructure.QueueTokenJpaRepository;
+import com.example.concert.domain.queue.infrastructure.RedisQueueTokenRepositoryImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -20,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -49,7 +48,7 @@ class ConcertControllerE2ETest extends AbstractIntegrationTest {
     private SeatJpaRepository seatJpaRepository;
 
     @Autowired
-    private QueueTokenJpaRepository queueTokenJpaRepository;
+    private RedisQueueTokenRepositoryImpl queueTokenRepository;
 
     private ConcertJpaEntity concert;
     private ConcertScheduleJpaEntity schedule1;
@@ -86,10 +85,11 @@ class ConcertControllerE2ETest extends AbstractIntegrationTest {
         reservedSeat.setStatus(SeatStatus.RESERVED);
         seatJpaRepository.save(reservedSeat);
 
-        validToken = UUID.randomUUID().toString();
-        QueueTokenJpaEntity queueToken = new QueueTokenJpaEntity(
-                1L, concert.getId(), validToken, TokenStatus.ACTIVE, LocalDateTime.now().plusMinutes(30));
-        queueTokenJpaRepository.save(queueToken);
+        // Redis 기반 토큰 생성
+        QueueToken queueToken = new QueueToken(1L, concert.getId(), LocalDateTime.now().plusMinutes(30));
+        queueToken.activate(); // ACTIVE 상태로 변경
+        QueueToken savedToken = queueTokenRepository.save(queueToken);
+        validToken = savedToken.getToken();
 
         entityManager.flush();
         entityManager.clear();

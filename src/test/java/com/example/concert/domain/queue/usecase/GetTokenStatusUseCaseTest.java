@@ -16,7 +16,6 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -29,8 +28,8 @@ class GetTokenStatusUseCaseTest {
     @InjectMocks
     private GetTokenStatusUseCase getTokenStatusUseCase;
 
-    private QueueToken createToken(Long id, TokenStatus status) {
-        return new QueueToken(id, 1L, 1L, "test-token", status,
+    private QueueToken createToken(Long id, Long concertId, String tokenValue, TokenStatus status) {
+        return new QueueToken(id, 1L, concertId, tokenValue, status,
                 LocalDateTime.now().plusMinutes(30), LocalDateTime.now());
     }
 
@@ -42,7 +41,7 @@ class GetTokenStatusUseCaseTest {
         @DisplayName("ACTIVE 상태일 때 rank는 0")
         void shouldReturnRankZero_whenStatusIsActive() {
             String tokenValue = "active-token";
-            QueueToken activeToken = createToken(1L, TokenStatus.ACTIVE);
+            QueueToken activeToken = createToken(1L, 1L, tokenValue, TokenStatus.ACTIVE);
             when(queueTokenRepository.findByToken(tokenValue)).thenReturn(Optional.of(activeToken));
 
             GetTokenStatusUseCase.TokenStatusResult result = getTokenStatusUseCase.execute(tokenValue);
@@ -56,7 +55,7 @@ class GetTokenStatusUseCaseTest {
         @DisplayName("EXPIRED 상태일 때 rank는 0")
         void shouldReturnRankZero_whenStatusIsExpired() {
             String tokenValue = "expired-token";
-            QueueToken expiredToken = createToken(1L, TokenStatus.EXPIRED);
+            QueueToken expiredToken = createToken(1L, 1L, tokenValue, TokenStatus.EXPIRED);
             when(queueTokenRepository.findByToken(tokenValue)).thenReturn(Optional.of(expiredToken));
 
             GetTokenStatusUseCase.TokenStatusResult result = getTokenStatusUseCase.execute(tokenValue);
@@ -70,15 +69,16 @@ class GetTokenStatusUseCaseTest {
         @DisplayName("WAITING 상태일 때 앞에 3명이면 rank는 4")
         void shouldReturnCalculatedRank_whenStatusIsWaiting() {
             String tokenValue = "waiting-token";
-            QueueToken waitingToken = createToken(10L, TokenStatus.WAITING);
+            Long concertId = 1L;
+            QueueToken waitingToken = createToken(10L, concertId, tokenValue, TokenStatus.WAITING);
             when(queueTokenRepository.findByToken(tokenValue)).thenReturn(Optional.of(waitingToken));
-            when(queueTokenRepository.countByStatusAndConcertIdAndIdLessThan(eq(TokenStatus.WAITING), eq(1L), eq(10L)))
-                    .thenReturn(3L);
+            // Redis ZRANK 반환값: 0-indexed이므로 3이면 4번째
+            when(queueTokenRepository.getRankByToken(tokenValue, concertId)).thenReturn(3L);
 
             GetTokenStatusUseCase.TokenStatusResult result = getTokenStatusUseCase.execute(tokenValue);
 
             assertThat(result.status()).isEqualTo("WAITING");
-            assertThat(result.rank()).isEqualTo(4L);
+            assertThat(result.rank()).isEqualTo(4L); // 3 + 1
             assertThat(result.estimatedWaitTime()).isEqualTo(8L); // 4 * 2 seconds
         }
 
@@ -86,10 +86,27 @@ class GetTokenStatusUseCaseTest {
         @DisplayName("WAITING 상태일 때 앞에 아무도 없으면 rank는 1")
         void shouldReturnRankOne_whenNoOneAhead() {
             String tokenValue = "first-waiting-token";
-            QueueToken waitingToken = createToken(1L, TokenStatus.WAITING);
+            Long concertId = 1L;
+            QueueToken waitingToken = createToken(1L, concertId, tokenValue, TokenStatus.WAITING);
             when(queueTokenRepository.findByToken(tokenValue)).thenReturn(Optional.of(waitingToken));
-            when(queueTokenRepository.countByStatusAndConcertIdAndIdLessThan(eq(TokenStatus.WAITING), eq(1L), eq(1L)))
-                    .thenReturn(0L);
+            // Redis ZRANK 반환값: 0 (가장 앞)
+            when(queueTokenRepository.getRankByToken(tokenValue, concertId)).thenReturn(0L);
+
+            GetTokenStatusUseCase.TokenStatusResult result = getTokenStatusUseCase.execute(tokenValue);
+
+            assertThat(result.rank()).isEqualTo(1L); // 0 + 1
+            assertThat(result.estimatedWaitTime()).isEqualTo(2L);
+        }
+
+        @Test
+        @DisplayName("WAITING 상태에서 Redis에 토큰이 없으면 rank는 1")
+        void shouldReturnRankOne_whenTokenNotInRedis() {
+            String tokenValue = "waiting-token-not-in-redis";
+            Long concertId = 1L;
+            QueueToken waitingToken = createToken(1L, concertId, tokenValue, TokenStatus.WAITING);
+            when(queueTokenRepository.findByToken(tokenValue)).thenReturn(Optional.of(waitingToken));
+            // Redis에 없는 경우 null 반환
+            when(queueTokenRepository.getRankByToken(tokenValue, concertId)).thenReturn(null);
 
             GetTokenStatusUseCase.TokenStatusResult result = getTokenStatusUseCase.execute(tokenValue);
 

@@ -1,15 +1,15 @@
 package com.example.concert.domain.concert.infrastructure;
 
+import com.example.concert.config.AbstractIntegrationTest;
 import com.example.concert.domain.concert.entity.ConcertSchedule;
 import com.example.concert.domain.concert.entity.SeatStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.context.annotation.Import;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -17,14 +17,20 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DataJpaTest
+@SpringBootTest
 @ActiveProfiles("test")
-@Import({ ConcertScheduleRepositoryImpl.class, SeatRepositoryImpl.class })
+@Transactional
 @DisplayName("ConcertScheduleRepository 통합 테스트")
-class ConcertScheduleRepositoryIntegrationTest {
+class ConcertScheduleRepositoryIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
-    private TestEntityManager entityManager;
+    private ConcertJpaRepository concertJpaRepository;
+
+    @Autowired
+    private ConcertScheduleJpaRepository concertScheduleJpaRepository;
+
+    @Autowired
+    private SeatJpaRepository seatJpaRepository;
 
     @Autowired
     private ConcertScheduleRepositoryImpl concertScheduleRepository;
@@ -38,34 +44,36 @@ class ConcertScheduleRepositoryIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        // Clean up previous data
+        seatJpaRepository.deleteAll();
+        concertScheduleJpaRepository.deleteAll();
+        concertJpaRepository.deleteAll();
+
         concert = new ConcertJpaEntity("Test Concert", "Test Description");
-        entityManager.persist(concert);
+        concertJpaRepository.saveAndFlush(concert);
 
         schedule1 = new ConcertScheduleJpaEntity(concert, LocalDateTime.of(2024, 5, 1, 19, 0),
                 LocalDateTime.now().minusDays(1));
         schedule2 = new ConcertScheduleJpaEntity(concert, LocalDateTime.of(2024, 5, 2, 19, 0),
                 LocalDateTime.now().minusDays(1));
-        entityManager.persist(schedule1);
-        entityManager.persist(schedule2);
+        concertScheduleJpaRepository.saveAndFlush(schedule1);
+        concertScheduleJpaRepository.saveAndFlush(schedule2);
 
         for (int i = 1; i <= 3; i++) {
             SeatJpaEntity seat = new SeatJpaEntity(schedule1, i, new BigDecimal("10000"));
-            entityManager.persist(seat);
+            seatJpaRepository.saveAndFlush(seat);
         }
         SeatJpaEntity reservedSeat1 = new SeatJpaEntity(schedule1, 4, new BigDecimal("10000"));
         reservedSeat1.setStatus(SeatStatus.RESERVED);
-        entityManager.persist(reservedSeat1);
+        seatJpaRepository.saveAndFlush(reservedSeat1);
         SeatJpaEntity reservedSeat2 = new SeatJpaEntity(schedule1, 5, new BigDecimal("10000"));
         reservedSeat2.setStatus(SeatStatus.RESERVED);
-        entityManager.persist(reservedSeat2);
+        seatJpaRepository.saveAndFlush(reservedSeat2);
 
         for (int i = 1; i <= 2; i++) {
             SeatJpaEntity seat = new SeatJpaEntity(schedule2, i, new BigDecimal("15000"));
-            entityManager.persist(seat);
+            seatJpaRepository.saveAndFlush(seat);
         }
-
-        entityManager.flush();
-        entityManager.clear();
     }
 
     @Test

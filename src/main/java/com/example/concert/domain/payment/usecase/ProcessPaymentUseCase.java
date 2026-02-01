@@ -3,10 +3,10 @@ package com.example.concert.domain.payment.usecase;
 import com.example.concert.domain.concert.entity.Seat;
 import com.example.concert.domain.concert.repository.SeatRepository;
 import com.example.concert.domain.payment.entity.Payment;
+import com.example.concert.domain.payment.event.PaymentCompletedEvent;
+import com.example.concert.domain.payment.event.PaymentEventPublisher;
 import com.example.concert.domain.payment.repository.PaymentRepository;
 import com.example.concert.domain.point.usecase.UsePointUseCase;
-import com.example.concert.domain.queue.entity.QueueToken;
-import com.example.concert.domain.queue.repository.QueueTokenRepository;
 import com.example.concert.domain.queue.usecase.ValidateTokenUseCase;
 import com.example.concert.domain.reservation.entity.Reservation;
 import com.example.concert.domain.reservation.repository.ReservationRepository;
@@ -20,6 +20,14 @@ import java.time.LocalDateTime;
 /**
  * 예약 결제 처리 UseCase (Facade)
  * 여러 도메인을 조율하여 결제 프로세스를 완성합니다.
+ * 
+ * <p>
+ * 이벤트 기반 아키텍처 적용:
+ * </p>
+ * <ul>
+ * <li>토큰 만료는 PaymentCompletedEvent를 통해 비동기로 처리</li>
+ * <li>Queue 도메인과의 직접 의존성 제거</li>
+ * </ul>
  */
 @Slf4j
 @Service
@@ -30,12 +38,12 @@ public class ProcessPaymentUseCase {
         private final SeatRepository seatRepository;
         private final UsePointUseCase usePointUseCase;
         private final PaymentRepository paymentRepository;
-        private final QueueTokenRepository queueTokenRepository;
+        private final PaymentEventPublisher paymentEventPublisher;
 
         @Transactional
         public PaymentResult execute(String token, Long userId, Long reservationId) {
-                // 1. 대기열 토큰 검증
-                QueueToken queueToken = validateTokenUseCase.execute(token);
+                // 1. 대기열 토큰 검증 (유효성만 확인, 만료는 이벤트로 비동기 처리)
+                validateTokenUseCase.execute(token);
 
                 // 2. 예약 조회 및 검증 (비관적 락으로 중복 결제 방지)
                 Reservation reservation = reservationRepository.findByIdWithLock(reservationId)
@@ -65,9 +73,14 @@ public class ProcessPaymentUseCase {
                 seat.confirm();
                 seatRepository.save(seat);
 
-                // 8. 토큰 만료 처리
-                queueToken.expire();
-                queueTokenRepository.save(queueToken);
+                // 8. 결제 완료 이벤트 발행 (토큰 만료는 Consumer에서 비동기 처리)
+                paymentEventPublisher.publishPaymentCompleted(new PaymentCompletedEvent(
+                                savedPayment.getId(),
+                                reservationId,
+                                userId,
+                                token,
+                                seat.getPrice(),
+                                savedPayment.getCreatedAt()));
 
                 log.info("Payment completed: paymentId={}, userId={}, amount={}",
                                 savedPayment.getId(), userId, seat.getPrice());

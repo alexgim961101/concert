@@ -1,5 +1,6 @@
 package com.example.concert.domain.concert.infrastructure;
 
+import com.example.concert.config.AbstractIntegrationTest;
 import com.example.concert.domain.concert.entity.Seat;
 import com.example.concert.domain.concert.entity.SeatStatus;
 import org.junit.jupiter.api.BeforeEach;
@@ -7,10 +8,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.context.annotation.Import;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -18,14 +18,20 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
 
-@DataJpaTest
+@SpringBootTest
 @ActiveProfiles("test")
-@Import(SeatRepositoryImpl.class)
+@Transactional
 @DisplayName("SeatRepository 통합 테스트")
-class SeatRepositoryIntegrationTest {
+class SeatRepositoryIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
-    private TestEntityManager entityManager;
+    private ConcertJpaRepository concertJpaRepository;
+
+    @Autowired
+    private ConcertScheduleJpaRepository concertScheduleJpaRepository;
+
+    @Autowired
+    private SeatJpaRepository seatJpaRepository;
 
     @Autowired
     private SeatRepositoryImpl seatRepository;
@@ -36,31 +42,33 @@ class SeatRepositoryIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        // Clean up previous data
+        seatJpaRepository.deleteAll();
+        concertScheduleJpaRepository.deleteAll();
+        concertJpaRepository.deleteAll();
+
         // Concert 생성
         concert = new ConcertJpaEntity("테스트 콘서트", "테스트 설명");
-        entityManager.persist(concert);
+        concertJpaRepository.saveAndFlush(concert);
 
         // Schedule 생성
         schedule = new ConcertScheduleJpaEntity(
                 concert,
                 LocalDateTime.now().plusDays(30),
                 LocalDateTime.now().minusDays(1));
-        entityManager.persist(schedule);
+        concertScheduleJpaRepository.saveAndFlush(schedule);
         scheduleId = schedule.getId();
 
         // Seats 생성 (AVAILABLE 3개, RESERVED 2개)
         for (int i = 1; i <= 3; i++) {
             SeatJpaEntity seat = new SeatJpaEntity(schedule, i, BigDecimal.valueOf(10000));
-            entityManager.persist(seat);
+            seatJpaRepository.saveAndFlush(seat);
         }
         for (int i = 4; i <= 5; i++) {
             SeatJpaEntity seat = new SeatJpaEntity(schedule, i, BigDecimal.valueOf(10000));
             seat.setStatus(SeatStatus.RESERVED);
-            entityManager.persist(seat);
+            seatJpaRepository.saveAndFlush(seat);
         }
-
-        entityManager.flush();
-        entityManager.clear();
     }
 
     @Nested
